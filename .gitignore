@@ -1,0 +1,97 @@
+# 📦 Dépendances
+/node_modules
+/node_modules/
+/chifa-frontend/node_modules/
+/chifa-frontend/.next/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+*temp_*
+# 🧪 Tests
+/coverage
+
+# ⚡ Next.js
+/.next/
+/out/
+
+# 🏗️ Production
+/build
+/dist
+/docs
+/main.build
+/scripts
+
+
+# 🔒 Clés, certificats, secrets
+.DS_Store
+*.pem
+*.key
+*.crt
+*.csr
+
+# 🧑‍💻 Débogage
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# 🔐 Variables d’environnement
+.env*
+!.env.example
+
+# ☁️ Vercel
+.vercel
+
+# 🛠️ TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# 💻 IDEs & systèmes
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+Thumbs.db
+ehthumbs.db
+
+# ⚙️ Python (au cas où)
+__pycache__/
+*.py[cod]
+*.pyo
+
+# 💣 GROS FICHIERS À NE PAS COMMITER
+*.7z
+*.zip
+*.rar
+*.tar
+*.gz
+*.iso
+*.exe
+*.msi
+*.bin
+*.dmg
+*.apk
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.mp3
+*.wav
+*.sqlite
+*.db
+*.log
+*.log.*
+
+# 🧪 Git backup & history
+*.orig
+*.rej
+
+# 🧠 Ignorer les fichiers volumineux ou sensibles manuellement
+Chifa.ai.7z
