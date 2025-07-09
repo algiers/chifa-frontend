@@ -1,10 +1,16 @@
-// We might not even need to import NextConfig if it's not used for type checking.
-// For a .mjs file, it's often simpler to just define the object.
-
 const nextConfig = {
-  /* config options here */
-  // Example:
-  // reactStrictMode: true,
+  // Exclude Supabase Edge Functions from build
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = config.externals || [];
+      // Ignore Deno-specific files during server build
+      config.externals.push(/^https?:\/\//);
+    }
+    return config;
+  },
+  experimental: {
+    serverComponentsExternalPackages: ['@supabase/supabase-js']
+  }
 };
 
 export default nextConfig;
