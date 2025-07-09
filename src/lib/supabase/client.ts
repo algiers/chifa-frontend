@@ -19,18 +19,26 @@ export function createSupabaseBrowserClient() {
           },
           set: (name, value, options) => {
             if (typeof document !== 'undefined') {
-              const cookieString = `${name}=${value}; Path=/; SameSite=Lax; Secure=${window.location.protocol === 'https:'}; ${options?.maxAge ? `Max-Age=${options.maxAge}` : ''}${options?.domain ? `; Domain=${options.domain}` : ''}`
+              // Configuration des cookies compatible HTTP et HTTPS
+              const isSecure = window.location.protocol === 'https:'
+              const cookieString = `${name}=${value}; Path=/; SameSite=Lax${isSecure ? '; Secure' : ''}${options?.maxAge ? `; Max-Age=${options.maxAge}` : ''}${options?.domain ? `; Domain=${options.domain}` : ''}`
               document.cookie = cookieString
               console.log('[Supabase Client] Cookie set:', name, cookieString)
             }
           },
           remove: (name, options) => {
             if (typeof document !== 'undefined') {
-              const cookieString = `${name}=; Path=/; SameSite=Lax; Secure=${window.location.protocol === 'https:'}; Max-Age=0${options?.domain ? `; Domain=${options.domain}` : ''}`
+              const isSecure = window.location.protocol === 'https:'
+              const cookieString = `${name}=; Path=/; SameSite=Lax${isSecure ? '; Secure' : ''}; Max-Age=0${options?.domain ? `; Domain=${options.domain}` : ''}`
               document.cookie = cookieString
               console.log('[Supabase Client] Cookie removed:', name, cookieString)
             }
           }
+        },
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
         }
       }
     )
