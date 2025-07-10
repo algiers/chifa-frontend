@@ -46,6 +46,18 @@ const initialState = {
   lastSqlResults: null,
 };
 
+// Polyfill for UUID generation
+function getUUID() {
+  if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  // Fallback: RFC4122 version 4 compliant UUID generator
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 export const useChatStore = create<ChatState>()(
   // Optionnel: persist middleware si on veut sauvegarder l'état du chat (ex: messages non envoyés)
   // Pour l'historique des conversations complètes, Supabase DB est préférable.
@@ -60,7 +72,7 @@ export const useChatStore = create<ChatState>()(
 
       addMessage: (messageContent, conversationIdToSet = null) => {
         const newMessage: ChatMessage = {
-          id: crypto.randomUUID(), // Générer un ID unique simple
+          id: getUUID(), // Générer un ID unique simple
           ...messageContent,
           timestamp: new Date(),
         };
