@@ -7,6 +7,13 @@
 // Services Configuration (Centralisée) - Tous les services externes
 // =================================================================
 
+function buildUrl(host: string, port: number, protocol: string = 'http') {
+  if (port === 80 || port === 443) {
+    return `${protocol}://${host}`;
+  }
+  return `${protocol}://${host}:${port}`;
+}
+
 export const SERVICES_CONFIG = {
   // LiteLLM Configuration
   LITELLM: {
@@ -22,22 +29,24 @@ export const SERVICES_CONFIG = {
   
   // LangGraph Agent Configuration
   LANGGRAPH: {
-    BASE_URL: process.env.NEXT_PUBLIC_LANGGRAPH_BASE_URL || 'http://agent.frp.youcef.xyz',
-    PORT: parseInt(process.env.NEXT_PUBLIC_LANGGRAPH_PORT || '8001'),
-    AGENT_ENDPOINT: process.env.CHIFA_LANGGRAPH_AGENT_URL || 'http://agent.frp.youcef.xyz:8001/api/v1/agent/invoke',
+    BASE_URL: process.env.NEXT_PUBLIC_LANGGRAPH_BASE_URL || 'agent.frp.youcef.xyz',
+    PORT: parseInt(process.env.NEXT_PUBLIC_LANGGRAPH_PORT || '80'),
+    AGENT_ENDPOINT: process.env.CHIFA_LANGGRAPH_AGENT_URL || buildUrl(process.env.NEXT_PUBLIC_LANGGRAPH_BASE_URL || 'agent.frp.youcef.xyz', parseInt(process.env.NEXT_PUBLIC_LANGGRAPH_PORT || '80')) + '/api/v1/agent/invoke',
     TIMEOUT: parseInt(process.env.NEXT_PUBLIC_LANGGRAPH_TIMEOUT || '120')
   },
   
   // API Services Configuration
   API_SERVICE: {
-    BASE_URL: process.env.NEXT_PUBLIC_API_SERVICE_BASE_URL || 'http://api.frp.youcef.xyz',
-    PORT: parseInt(process.env.NEXT_PUBLIC_API_SERVICE_PORT || '8002')
+    BASE_URL: process.env.NEXT_PUBLIC_API_SERVICE_BASE_URL || 'api.frp.youcef.xyz',
+    PORT: parseInt(process.env.NEXT_PUBLIC_API_SERVICE_PORT || '80'),
+    URL: buildUrl(process.env.NEXT_PUBLIC_API_SERVICE_BASE_URL || 'api.frp.youcef.xyz', parseInt(process.env.NEXT_PUBLIC_API_SERVICE_PORT || '80'))
   },
   
   // Streamlit Configuration
   STREAMLIT: {
-    BASE_URL: process.env.NEXT_PUBLIC_STREAMLIT_BASE_URL || 'http://streamlit.frp.youcef.xyz',
-    PORT: parseInt(process.env.NEXT_PUBLIC_STREAMLIT_PORT || '8501')
+    BASE_URL: process.env.NEXT_PUBLIC_STREAMLIT_BASE_URL || 'streamlit.frp.youcef.xyz',
+    PORT: parseInt(process.env.NEXT_PUBLIC_STREAMLIT_PORT || '80'),
+    URL: buildUrl(process.env.NEXT_PUBLIC_STREAMLIT_BASE_URL || 'streamlit.frp.youcef.xyz', parseInt(process.env.NEXT_PUBLIC_STREAMLIT_PORT || '80'))
   },
   
   // Database External Access
@@ -126,12 +135,12 @@ export const getAPIServiceConfig = () => {
   return {
     baseUrl: SERVICES_CONFIG.API_SERVICE.BASE_URL,
     port: SERVICES_CONFIG.API_SERVICE.PORT,
-    url: `${SERVICES_CONFIG.API_SERVICE.BASE_URL}:${SERVICES_CONFIG.API_SERVICE.PORT}`
+    url: SERVICES_CONFIG.API_SERVICE.URL
   };
 };
 
 export const getAPIServiceEndpoints = () => {
-  const baseUrl = `${SERVICES_CONFIG.API_SERVICE.BASE_URL}:${SERVICES_CONFIG.API_SERVICE.PORT}`;
+  const baseUrl = SERVICES_CONFIG.API_SERVICE.URL;
   
   return {
     health: `${baseUrl}/health`,
@@ -147,7 +156,7 @@ export const getStreamlitConfig = () => {
   return {
     baseUrl: SERVICES_CONFIG.STREAMLIT.BASE_URL,
     port: SERVICES_CONFIG.STREAMLIT.PORT,
-    url: `${SERVICES_CONFIG.STREAMLIT.BASE_URL}:${SERVICES_CONFIG.STREAMLIT.PORT}`
+    url: SERVICES_CONFIG.STREAMLIT.URL
   };
 };
 
