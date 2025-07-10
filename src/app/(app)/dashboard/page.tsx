@@ -22,6 +22,14 @@ function DashboardContent() {
   const isAuthReady = useAuthStore((s) => s.isAuthReady);
   const isAdmin = useAuthStore((s) => s.isAdmin);
 
+  // Clear error if user is properly loaded and profile exists
+  useEffect(() => {
+    if (user && codePs && pharmacyStatus === 'active' && authError) {
+      console.log('[Dashboard] Clearing stale error - user and profile are loaded successfully');
+      setError(null);
+    }
+  }, [user, codePs, pharmacyStatus, authError, setError]);
+
   // Debug logs pour comprendre l'état du profil
   console.log('[Dashboard] Debug - User:', user?.id, 'PharmacyStatus:', pharmacyStatus, 'CodePs:', codePs, 'Error:', authError);
   const { setMessages, setCurrentConversationId, clearChat, setLoading: setChatLoading, setError: setChatError } = useChatStore();
@@ -175,7 +183,18 @@ function DashboardContent() {
   }, [user, pharmacyStatus, router]);
 
   // Afficher un message d'erreur explicite si le profil ne se charge pas
-  if (authError) {
+  // Vérifier que l'erreur n'est pas un objet vide et qu'elle a un contenu utile
+  const hasRealError = authError && (
+    typeof authError === 'string' ||
+    (typeof authError === 'object' && authError !== null && (
+      (authError.message && authError.message.trim() !== '') ||
+      ('code' in authError && authError.code) ||
+      ('status' in authError && authError.status) ||
+      (Object.keys(authError).length > 0 && JSON.stringify(authError) !== '{}')
+    ))
+  );
+  
+  if (hasRealError) {
     // Debug log pour vérifier l'état de l'erreur
     console.debug('[Dashboard] authError:', authError);
     let errorMsg = '';

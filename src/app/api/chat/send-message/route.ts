@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     const litellmVirtualKey = secret.litellm_virtual_key;
 
     // Appeler l'agent LangGraph (URL centralisée)
-    const agentUrl = process.env.CHIFA_LANGGRAPH_AGENT_URL || 'http://agent.frp.youcef.xyz:8001/api/v1/agent/invoke';
+    const agentUrl = process.env.CHIFA_LANGGRAPH_AGENT_URL || 'http://localhost:8001/api/v1/agent/invoke';
     
     const agentRequestBody = {
       query: query,
