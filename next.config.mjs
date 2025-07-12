@@ -20,6 +20,13 @@ const nextConfig = {
       'streamlit.frp.youcef.xyz',
     ],
   },
+  // Optimisations pour résoudre les problèmes d'hydratation
+  reactStrictMode: false, // Désactiver temporairement pour éviter les doubles rendus
+  swcMinify: true,
+  compiler: {
+    // Supprimer les console.log en production
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
   async headers() {
     return [
       {
@@ -32,6 +39,18 @@ const nextConfig = {
           {
             key: 'Access-Control-Allow-Credentials',
             value: 'true',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
           },
         ],
       },

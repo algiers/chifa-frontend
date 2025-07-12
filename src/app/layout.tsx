@@ -6,6 +6,7 @@ import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { SupabaseProvider } from '@/contexts/SupabaseContext';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
+import { FullScreenLoading } from '@/components/ui/loading';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 export default function RootLayout({
@@ -41,12 +42,12 @@ export default function RootLayout({
   }, [handleAuthStateChange, supabase]);
 
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
       <head>
         <title>Chifa.ai</title>
         <meta name="description" content="Interrogez votre base de données pharmacie en langage naturel." />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -55,12 +56,7 @@ export default function RootLayout({
         >
           <SupabaseProvider supabase={supabase}>
             {!isInitialAuthCheckDone ? (
-              <div className="flex items-center justify-center h-screen">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Initialisation de l'authentification...</p>
-                </div>
-              </div>
+              <FullScreenLoading message="Initialisation de l'authentification..." />
             ) : (
               children
             )}

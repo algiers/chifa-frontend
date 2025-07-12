@@ -9,8 +9,13 @@ export function useSupabaseAuth() {
   const supabase = createSupabaseBrowserClient();
   const { setUser, setProfileDetails, clearAuth, setAuthReady, setError } = useAuthStore();
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitializedRef = useRef(false);
 
-  console.log('[useSupabaseAuth] Hook initialized');
+  // Log d'initialisation une seule fois
+  if (!isInitializedRef.current) {
+    console.log('[useSupabaseAuth] Hook initialized');
+    isInitializedRef.current = true;
+  }
 
   // Fonction pour programmer le refresh automatique du token
   const scheduleTokenRefresh = useCallback((expiresAt: number) => {

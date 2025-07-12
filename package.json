@@ -5,8 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:prod": "NODE_ENV=production next build",
     "start": "next start",
-    "lint": "next lint"
+    "start:prod": "NODE_ENV=production next start",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "clean": "rm -rf .next node_modules/.cache",
+    "clean:all": "rm -rf .next node_modules package-lock.json && npm install"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
