@@ -1,14 +1,18 @@
 'use client';
 
-import React, { useEffect, Suspense, useState } from 'react'; // Import Suspense
+import React, { useEffect, Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ChatInput from '@/components/chat/ChatInput';
 import MessageList from '@/components/chat/MessageList';
 import { useAuthStore } from '@/stores/authStore';
-import { useChatStore, ChatMessage } from '@/stores/chatStore'; // Import useChatStore and ChatMessage
-import { createSupabaseBrowserClient } from '@/lib/supabase/client'; 
-import PharmacyConnectionStatus from '@/components/PharmacyConnectionStatus'; // Importer le composant PharmacyConnectionStatus
-// import SQLExecutionDisplay from '@/components/chat/SQLExecutionDisplay'; // À créer plus tard
+import { useChatStore, ChatMessage } from '@/stores/chatStore';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import PharmacyConnectionStatus from '@/components/PharmacyConnectionStatus';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { AlertCircle, ArrowLeft, Loader2, MessageSquare, Activity, Settings, RefreshCw } from 'lucide-react';
 
 function DashboardContent() {
   const user = useAuthStore((s) => s.user);
@@ -195,7 +199,6 @@ function DashboardContent() {
   );
   
   if (hasRealError) {
-    // Debug log pour vérifier l'état de l'erreur
     console.debug('[Dashboard] authError:', authError);
     let errorMsg = '';
     if (typeof authError === 'string') errorMsg = authError;
@@ -203,85 +206,184 @@ function DashboardContent() {
     else if (typeof authError === 'object' && 'code' in authError) errorMsg = `Code: ${(authError as any).code}`;
     else if (typeof authError === 'object' && 'status' in authError) errorMsg = `Status: ${(authError as any).status}`;
     else errorMsg = JSON.stringify(authError);
+    
     return (
-      <div className="p-6 text-center text-red-600 space-y-4">
-        <div>
-          <strong>Erreur lors du chargement du profil utilisateur/pharmacie :</strong><br />
-          {errorMsg || 'Erreur inconnue.'}
-        </div>
-        <div className="space-x-2">
-          <button
-            onClick={handleRetryProfile}
-            disabled={retryLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {retryLoading ? 'Nouvelle tentative...' : 'Réessayer'}
-          </button>
-          <button
-            onClick={debugProfile}
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-          >
-            Debug Profil
-          </button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
+        <Card className="border-0 shadow-xl max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <CardTitle className="text-xl font-bold">Erreur de profil</CardTitle>
+            <CardDescription>
+              {errorMsg || 'Erreur inconnue lors du chargement de votre profil'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <Button
+              onClick={handleRetryProfile}
+              disabled={retryLoading}
+              className="w-full"
+            >
+              {retryLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Nouvelle tentative...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Réessayer
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={debugProfile}
+              variant="outline"
+              className="w-full"
+            >
+              Debug Profil
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
-  // Vérification plus précise selon le statut de la pharmacie
   if (!user) {
     if (authLoading) {
-      return <div className="p-6 text-center">Chargement des informations utilisateur...</div>;
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-muted/50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Chargement des informations utilisateur...</p>
+          </div>
+        </div>
+      );
     }
-    return <div className="p-6 text-center text-red-600">Utilisateur non connecté. Veuillez vous connecter.</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
+        <Card className="border-0 shadow-xl max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <CardTitle>Connexion requise</CardTitle>
+            <CardDescription>Veuillez vous connecter pour accéder au dashboard</CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button asChild className="w-full">
+              <a href="/login?redirectTo=/dashboard">Se connecter</a>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  // Pour les statuts qui nécessitent un code_ps
   if (pharmacyStatus === 'active' || pharmacyStatus === 'active_demo') {
     if (!codePs) {
-      return <div className="p-6 text-center text-red-600">Code pharmacie manquant. Veuillez compléter votre profil pharmacie.</div>;
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
+          <Card className="border-0 shadow-xl max-w-md w-full">
+            <CardHeader className="text-center">
+              <CardTitle>Configuration incomplète</CardTitle>
+              <CardDescription>Votre code pharmacie est manquant</CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <Button asChild className="w-full">
+                <a href="/complete-pharmacy-profile">Compléter le profil</a>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
     }
   }
 
-  // Pour les statuts en attente ou suspendus, on peut afficher le dashboard mais avec des limitations
   if (pharmacyStatus === 'not_registered' || pharmacyStatus === 'pending_pharmacy_details') {
-    return <div className="p-6 text-center">Veuillez compléter les informations de votre pharmacie...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
+        <Card className="border-0 shadow-xl max-w-md w-full">
+          <CardHeader className="text-center">
+            <CardTitle>Configuration requise</CardTitle>
+            <CardDescription>Veuillez compléter les informations de votre pharmacie</CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button asChild className="w-full">
+              <a href="/complete-pharmacy-profile">Configurer ma pharmacie</a>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
   
   const canChat = pharmacyStatus === 'active' || (pharmacyStatus === 'active_demo' && demoCreditsRemaining > 0);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme.spacing.headerHeight)]"> {/* Ajuster la hauteur si Navbar a une hauteur fixe */}
-      <header className="p-4 border-b bg-white shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800">Chat avec l'Agent Chifa.ai</h1>
-          {pharmacyStatus === 'active_demo' && (
-            <p className="text-sm text-gray-600">
-              Plan Démo - Crédits restants : {demoCreditsRemaining}
-            </p>
-          )}
+    <div className="min-h-screen bg-background">
+      {/* Header with modern design */}
+      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" size="icon" asChild>
+                <a href="/">
+                  <ArrowLeft className="h-4 w-4" />
+                </a>
+              </Button>
+              <div>
+                <h1 className="text-xl font-semibold flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  Chat Chifa.ai
+                </h1>
+                {pharmacyStatus === 'active_demo' && (
+                  <Badge variant="secondary" className="text-xs mt-1">
+                    Démo - {demoCreditsRemaining} crédits restants
+                  </Badge>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <PharmacyConnectionStatus apiUrl={LOCAL_API_URL} />
+              <ThemeToggle />
+              <Button variant="ghost" size="icon" asChild>
+                <a href="/settings">
+                  <Settings className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          </div>
+          
           {pharmacyStatus === 'pending_payment_approval' && (
-            <p className="text-sm text-orange-600 bg-orange-100 p-2 rounded-md">
-              Votre compte est en attente d'approbation de paiement. Certaines fonctionnalités peuvent être limitées.
-            </p>
+            <div className="mt-3">
+              <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-sm">
+                    Votre compte est en attente d'approbation de paiement. Certaines fonctionnalités peuvent être limitées.
+                  </span>
+                </div>
+              </div>
+            </div>
           )}
         </div>
-        <PharmacyConnectionStatus apiUrl={LOCAL_API_URL} /> {/* Ajouter le composant PharmacyConnectionStatus ici */}
       </header>
       
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Zone d'affichage des messages */}
-        <div className="flex-1 overflow-y-auto">
-          <MessageList />
+      {/* Main chat area */}
+      <div className="container mx-auto px-4 py-6 h-[calc(100vh-120px)] flex flex-col">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            <MessageList />
+          </div>
         </div>
 
-        {/* Zone d'affichage des résultats SQL (sera conditionnelle) */}
-        {/* <div className="h-1/3 border-t p-2 bg-white overflow-auto">
-          <SQLExecutionDisplay />
-        </div> */}
+        {/* Chat input */}
+        <div className="mt-4">
+          <ChatInput />
+        </div>
       </div>
-
-      {/* Zone de saisie */}
-      <ChatInput />
     </div>
   );
 }

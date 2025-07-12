@@ -50,18 +50,10 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Log détaillé pour debugging
-  console.log('[Middleware] Path:', pathname, 'Session:', !!session);
-  if (session) {
-    console.log('[Middleware] User ID:', session.user?.id);
-    console.log('[Middleware] Session expires at:', new Date(session.expires_at! * 1000));
+  // Logs de debug seulement en développement et pour les erreurs importantes
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_MIDDLEWARE === 'true') {
+    console.log('[Middleware] Path:', pathname, 'Session:', !!session);
   }
-  
-  // Log les cookies disponibles
-  const cookies = request.cookies.getAll();
-  console.log('[Middleware] Available cookies:', cookies.map(c => c.name).join(', '));
-  const supabaseCookies = cookies.filter(c => c.name.includes('supabase') || c.name.includes('sb-'));
-  console.log('[Middleware] Supabase cookies:', supabaseCookies.map(c => `${c.name}=${c.value.substring(0, 20)}...`));
 
   // Routes protégées qui nécessitent une authentification
   const protectedRoutes = ['/dashboard', '/history', '/settings', '/complete-pharmacy-profile'];

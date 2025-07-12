@@ -1,103 +1,98 @@
-import Link from 'next/link';
-import React from 'react';
-
-interface PlanProps {
-  name: string;
-  price: string;
-  features: string[];
-  actionText: string;
-  actionLink: string;
-  isFeatured?: boolean;
-}
-
-const PlanCard: React.FC<PlanProps> = ({ name, price, features, actionText, actionLink, isFeatured }) => {
-  return (
-    <div className={`border rounded-lg p-6 shadow-lg ${isFeatured ? 'border-blue-500 scale-105 bg-blue-50' : 'border-gray-300'}`}>
-      <h2 className={`text-2xl font-bold mb-4 ${isFeatured ? 'text-blue-600' : 'text-gray-800'}`}>{name}</h2>
-      <p className="text-4xl font-extrabold mb-6">{price}<span className="text-base font-normal text-gray-500">{name !== "Entreprise" ? "/mois" : ""}</span></p>
-      <ul className="space-y-2 mb-8 text-gray-600">
-        {features.map((feature, index) => (
-          <li key={index} className="flex items-center">
-            <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path>
-            </svg>
-            {feature}
-          </li>
-        ))}
-      </ul>
-      <Link
-        href={actionLink}
-        className={`w-full text-center py-3 px-6 rounded-lg font-semibold transition duration-150 ease-in-out
-                    ${isFeatured ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-      >
-        {actionText}
-      </Link>
-    </div>
-  );
-};
+import { Header } from "@/components/sections/Header"
+import { Footer } from "@/components/sections/Footer"
+import { Pricing } from "@/components/sections/Pricing"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { ArrowLeft } from "lucide-react"
+import Link from "next/link"
 
 export default function PricingPage() {
-  const plans: PlanProps[] = [
-    {
-      name: 'Démo Gratuite',
-      price: '0 DA',
-      features: [
-        '3 requêtes IA',
-        'Accès à votre base de données',
-        'Support communautaire',
-      ],
-      actionText: 'Commencer Gratuitement',
-      actionLink: '/register?plan=free_demo', // L'utilisateur s'inscrit, puis complète les infos pharmacie
-    },
-    {
-      name: 'Pro Pharmacie',
-      price: '4,900 DA',
-      features: [
-        'Requêtes IA illimitées',
-        'Historique des conversations',
-        'Visualisation des données (Basique)',
-        'Support prioritaire par email',
-      ],
-      actionText: 'Choisir Pro',
-      actionLink: '/register?plan=pro_monthly', // S'il n'est pas loggué, ou vers formulaire pharmacie si loggué
-      isFeatured: true,
-    },
-    {
-      name: 'Entreprise',
-      price: 'Sur Devis',
-      features: [
-        'Fonctionnalités Pro Pharmacie',
-        'Support dédié et SLA',
-        'Personnalisations avancées',
-        'Formation et onboarding',
-      ],
-      actionText: 'Nous Contacter',
-      actionLink: '/contact', // À créer
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto text-center">
-        <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
-          Des plans adaptés à chaque pharmacie
-        </h1>
-        <p className="mt-4 text-xl text-gray-600">
-          Commencez gratuitement ou choisissez un plan pour débloquer tout le potentiel de Chifa.ai.
-        </p>
-      </div>
+    <div className="min-h-screen">
+      <Header />
+      
+      <main>
+        {/* Hero Section */}
+        <section className="container mx-auto px-4 py-16 lg:py-24">
+          <div className="text-center space-y-8">
+            <div className="flex items-center justify-center space-x-2">
+              <Badge variant="outline" className="text-sm">
+                Tarification transparente
+              </Badge>
+            </div>
+            
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+              Des plans adaptés à 
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                {" "}chaque pharmacie
+              </span>
+            </h1>
+            
+            <p className="max-w-[600px] mx-auto text-xl text-muted-foreground">
+              Commencez gratuitement et évoluez selon vos besoins. 
+              Aucune carte de crédit requise pour l'essai gratuit.
+            </p>
 
-      <div className="mt-16 max-w-5xl mx-auto grid gap-8 lg:grid-cols-3 lg:max-w-none">
-        {plans.map((plan) => (
-          <PlanCard key={plan.name} {...plan} />
-        ))}
-      </div>
+            <Button variant="outline" asChild>
+              <Link href="/" className="inline-flex items-center">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Retour à l'accueil
+              </Link>
+            </Button>
+          </div>
+        </section>
 
-      <div className="mt-12 text-center">
-        <Link href="/" className="text-blue-600 hover:text-blue-800 font-medium">
-          &larr; Retour à l'accueil
-        </Link>
-      </div>
+        {/* Pricing Section */}
+        <Pricing />
+
+        {/* FAQ Section */}
+        <section className="container mx-auto px-4 py-16 lg:py-24 bg-muted/50">
+          <div className="text-center space-y-4 mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold">
+              Questions fréquentes
+            </h2>
+            <p className="max-w-[600px] mx-auto text-xl text-muted-foreground">
+              Tout ce que vous devez savoir sur Chifa.ai
+            </p>
+          </div>
+
+          <div className="max-w-3xl mx-auto space-y-8">
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">Comment fonctionne l'essai gratuit ?</h3>
+              <p className="text-muted-foreground">
+                L'essai gratuit vous donne accès à 3 requêtes IA pour tester notre solution. 
+                Aucune carte de crédit n'est requise et vous pouvez passer à un plan payant à tout moment.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">Mes données sont-elles sécurisées ?</h3>
+              <p className="text-muted-foreground">
+                Absolument. Vos données restent dans votre pharmacie et ne transitent jamais par nos serveurs. 
+                Nous utilisons un chiffrement de bout en bout pour toutes les communications.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">Puis-je changer de plan à tout moment ?</h3>
+              <p className="text-muted-foreground">
+                Oui, vous pouvez passer à un plan supérieur ou inférieur à tout moment. 
+                Les changements prennent effet immédiatement.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold">Quel support est inclus ?</h3>
+              <p className="text-muted-foreground">
+                Tous les plans incluent un support par email. Le plan Pro inclut un support prioritaire, 
+                et le plan Entreprise inclut un support dédié avec SLA.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+      
+      <Footer />
     </div>
-  );
+  )
 }

@@ -5,27 +5,31 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
-import AuthForm from '@/components/auth/AuthForm';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
-  const { setUser, setLoading, setError: setAuthError, setProfileDetails } = useAuthStore();
+  const { setUser, setLoading, setError: setAuthError } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoadingState] = useState(false); // Renommé pour éviter conflit avec authStore.isLoading
-  const [error, setErrorState] = useState<string | null>(null); // Renommé pour éviter conflit avec authStore.error
+  const [isLoading, setIsLoadingState] = useState(false);
+  const [error, setErrorState] = useState<string | null>(null);
 
-  const handleLogin = async (formData: Record<string, string>) => {
-    console.log('[LoginPage] handleLogin started. FormData:', formData);
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    console.log('[LoginPage] handleLogin started');
     setIsLoadingState(true);
-    setLoading(true); 
+    setLoading(true);
     setErrorState(null);
-    setAuthError(null); 
-
-    const { email, password } = formData;
+    setAuthError(null);
 
     console.log(`[LoginPage] Attempting signInWithPassword for email: ${email}`);
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -37,7 +41,7 @@ function LoginPageContent() {
 
     if (signInError) {
       console.error('[LoginPage] signInError:', signInError);
-      setErrorState(signInError.message);
+      setErrorState('Email ou mot de passe incorrect');
       setAuthError(new Error(signInError.message));
       setIsLoadingState(false);
       setLoading(false);
@@ -46,47 +50,147 @@ function LoginPageContent() {
 
     if (data.user && data.session) {
       console.log('[LoginPage] Login successful. User ID:', data.user.id);
-      setUser(data.user); 
+      setUser(data.user);
       
       const redirectTo = searchParams.get('redirectTo') || '/dashboard';
       console.log(`[LoginPage] Redirecting to: ${redirectTo}`);
       router.push(redirectTo);
-      // La redirection est initiée. Les états de chargement seront remis à false ci-dessous.
-      // Si la redirection est très rapide, le composant pourrait être démonté avant.
     } else {
-      console.warn('[LoginPage] Login issue: No user/session data returned, but no explicit error.');
-      setErrorState('Erreur inattendue lors de la connexion (données utilisateur/session manquantes).');
-      setAuthError(new Error('Erreur inattendue lors de la connexion (données utilisateur/session manquantes).'));
+      console.warn('[LoginPage] Login issue: No user/session data returned');
+      setErrorState('Erreur inattendue lors de la connexion');
+      setAuthError(new Error('Erreur inattendue lors de la connexion'));
     }
     
-    console.log('[LoginPage] handleLogin finished. Setting loading states to false.');
+    console.log('[LoginPage] handleLogin finished');
     setIsLoadingState(false);
     setLoading(false);
   };
 
   return (
-    <div>
-      <h2 className="text-center text-3xl font-extrabold text-gray-900 mb-6">
-        Connectez-vous à votre compte
-      </h2>
-      <AuthForm
-        mode="login"
-        onSubmit={handleLogin}
-        isLoading={isLoading}
-        error={error}
-      />
-      <div className="mt-6 text-center">
-        <p className="text-sm">
-          Pas encore de compte ?{' '}
-          <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-            Inscrivez-vous
+    <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
+      <div className="w-full max-w-md space-y-8">
+        {/* Header with back button and theme toggle */}
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <ThemeToggle />
+        </div>
+
+        {/* Logo and brand */}
+        <div className="text-center">
+          <Link href="/" className="inline-flex items-center space-x-2">
+            <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-xl">C</span>
+            </div>
+            <span className="font-bold text-2xl">Chifa.ai</span>
           </Link>
-        </p>
-        <p className="mt-2 text-sm">
-          <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
-            Mot de passe oublié ?
+        </div>
+
+        {/* Login Card */}
+        <Card className="border-0 shadow-xl">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-bold">Se connecter</CardTitle>
+            <CardDescription>
+              Entrez vos identifiants pour accéder à votre pharmacie
+            </CardDescription>
+          </CardHeader>
+
+          <form onSubmit={handleLogin}>
+            <CardContent className="space-y-4">
+              {/* Error message */}
+              {error && (
+                <div className="flex items-center space-x-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* Email field */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="votre@pharmacie.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                  required
+                  autoComplete="email"
+                />
+              </div>
+
+              {/* Password field */}
+              <div className="space-y-2">
+                <Label htmlFor="password">Mot de passe</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+
+              {/* Forgot password link */}
+              <div className="text-right">
+                <Link 
+                  href="/forgot-password" 
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Mot de passe oublié ?
+                </Link>
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex flex-col space-y-4">
+              {/* Submit button */}
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading || !email || !password}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Connexion...
+                  </>
+                ) : (
+                  'Se connecter'
+                )}
+              </Button>
+
+              {/* Register link */}
+              <div className="text-center text-sm text-muted-foreground">
+                Pas encore de compte ?{' '}
+                <Link 
+                  href="/register" 
+                  className="text-primary hover:underline font-medium"
+                >
+                  S'inscrire
+                </Link>
+              </div>
+            </CardFooter>
+          </form>
+        </Card>
+
+        {/* Footer */}
+        <div className="text-center text-xs text-muted-foreground">
+          En vous connectant, vous acceptez nos{' '}
+          <Link href="/terms" className="underline hover:text-primary">
+            conditions d'utilisation
+          </Link>{' '}
+          et notre{' '}
+          <Link href="/privacy" className="underline hover:text-primary">
+            politique de confidentialité
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
@@ -94,12 +198,14 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Chargement...</p>
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
       </div>
-    </div>}>
+    }>
       <LoginPageContent />
     </Suspense>
   );

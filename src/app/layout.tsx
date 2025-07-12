@@ -4,6 +4,7 @@ import "./globals.css";
 import React, { useEffect, useState } from "react";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { SupabaseProvider } from '@/contexts/SupabaseContext';
+import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
@@ -46,19 +47,26 @@ export default function RootLayout({
         <meta name="description" content="Interrogez votre base de données pharmacie en langage naturel." />
       </head>
       <body className="antialiased">
-        <SupabaseProvider supabase={supabase}>
-          {!isInitialAuthCheckDone ? (
-            <div className="flex items-center justify-center h-screen">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Initialisation de l'authentification...</p>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SupabaseProvider supabase={supabase}>
+            {!isInitialAuthCheckDone ? (
+              <div className="flex items-center justify-center h-screen">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Initialisation de l'authentification...</p>
+                </div>
               </div>
-            </div>
-          ) : (
-            children
-          )}
-          <Toaster />
-        </SupabaseProvider>
+            ) : (
+              children
+            )}
+            <Toaster />
+          </SupabaseProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
