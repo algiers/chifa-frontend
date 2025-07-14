@@ -22,8 +22,8 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">C</span>
+            <div className="h-8 w-8 rounded-lg bg-green-600 flex items-center justify-center">
+              <span className="text-white font-bold text-lg">C</span>
             </div>
             <span className="font-bold text-xl">Chifa.ai</span>
           </Link>
@@ -47,7 +47,7 @@ export function Header() {
             <Button variant="ghost" asChild>
               <Link href="/login">Se connecter</Link>
             </Button>
-            <Button asChild>
+            <Button asChild className="bg-green-600 hover:bg-green-700">
               <Link href="/register">Commencer</Link>
             </Button>
           </div>
@@ -83,7 +83,7 @@ export function Header() {
                 <Button variant="ghost" asChild>
                   <Link href="/login">Se connecter</Link>
                 </Button>
-                <Button asChild>
+                <Button asChild className="bg-green-600 hover:bg-green-700">
                   <Link href="/register">Commencer</Link>
                 </Button>
               </div>

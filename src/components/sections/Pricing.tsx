@@ -70,9 +70,9 @@ export function Pricing() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
         {plans.map((plan, index) => (
-          <Card key={index} className={`relative ${plan.popular ? 'border-primary shadow-lg scale-105' : 'border-border'}`}>
+          <Card key={index} className={`relative ${plan.popular ? 'border-green-600 shadow-lg scale-105 bg-green-50/50' : 'border-border'}`}>
             {plan.popular && (
-              <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+              <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-green-600 text-white">
                 Populaire
               </Badge>
             )}
@@ -90,7 +90,7 @@ export function Pricing() {
             <CardContent className="space-y-4">
               {plan.features.map((feature, featureIndex) => (
                 <div key={featureIndex} className="flex items-center space-x-3">
-                  <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
                   <span className="text-sm">{feature}</span>
                 </div>
               ))}
@@ -99,7 +99,7 @@ export function Pricing() {
             <CardFooter>
               <Button 
                 asChild 
-                className={`w-full ${plan.popular ? 'bg-primary' : 'variant-outline'}`}
+                className={`w-full ${plan.popular ? 'bg-green-600 hover:bg-green-700 text-white' : 'border-green-600 text-green-600 hover:bg-green-50'}`}
                 variant={plan.popular ? 'default' : 'outline'}
               >
                 <Link href={plan.href}>

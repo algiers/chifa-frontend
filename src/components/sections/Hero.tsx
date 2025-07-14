@@ -10,7 +10,7 @@ export function Hero() {
     <section className="container mx-auto px-4 py-16 lg:py-24">
       <div className="flex flex-col items-center text-center space-y-8">
         {/* Badge */}
-        <div className="flex items-center space-x-2 rounded-full border px-3 py-1 text-sm bg-muted">
+        <div className="flex items-center space-x-2 rounded-full border px-3 py-1 text-sm bg-green-50 border-green-200 text-green-700">
           <Sparkles className="h-4 w-4" />
           <span>Nouveau: IA pharmacie disponible maintenant</span>
         </div>
@@ -18,7 +18,7 @@ export function Hero() {
         {/* Main Title */}
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
           Interrogez votre pharmacie
-          <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
             {" "}en langage naturel
           </span>
         </h1>
@@ -31,13 +31,13 @@ export function Hero() {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
-          <Button asChild size="lg" className="text-lg px-8">
+          <Button asChild size="lg" className="text-lg px-8 bg-green-600 hover:bg-green-700">
             <Link href="/register">
               Commencer gratuitement
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
-          <Button asChild variant="outline" size="lg" className="text-lg px-8">
+          <Button asChild variant="outline" size="lg" className="text-lg px-8 border-green-600 text-green-600 hover:bg-green-50">
             <Link href="/pricing">
               Voir la démo
             </Link>
@@ -52,7 +52,7 @@ export function Hero() {
               placeholder="votre@pharmacie.com"
               className="flex-1"
             />
-            <Button type="submit">
+            <Button type="submit" className="bg-green-600 hover:bg-green-700">
               Démarrer
             </Button>
           </div>

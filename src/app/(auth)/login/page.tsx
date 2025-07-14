@@ -82,8 +82,8 @@ function LoginPageContent() {
         {/* Logo and brand */}
         <div className="text-center">
           <Link href="/" className="inline-flex items-center space-x-2">
-            <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">C</span>
+            <div className="h-12 w-12 rounded-lg bg-green-600 flex items-center justify-center">
+              <span className="text-white font-bold text-xl">C</span>
             </div>
             <span className="font-bold text-2xl">Chifa.ai</span>
           </Link>
@@ -142,7 +142,7 @@ function LoginPageContent() {
               <div className="text-right">
                 <Link 
                   href="/forgot-password" 
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  className="text-sm text-muted-foreground hover:text-green-600 transition-colors"
                 >
                   Mot de passe oublié ?
                 </Link>
@@ -153,7 +153,7 @@ function LoginPageContent() {
               {/* Submit button */}
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full bg-green-600 hover:bg-green-700" 
                 disabled={isLoading || !email || !password}
               >
                 {isLoading ? (
@@ -171,7 +171,7 @@ function LoginPageContent() {
                 Pas encore de compte ?{' '}
                 <Link 
                   href="/register" 
-                  className="text-primary hover:underline font-medium"
+                  className="text-green-600 hover:underline font-medium"
                 >
                   S'inscrire
                 </Link>
@@ -183,11 +183,11 @@ function LoginPageContent() {
         {/* Footer */}
         <div className="text-center text-xs text-muted-foreground">
           En vous connectant, vous acceptez nos{' '}
-          <Link href="/terms" className="underline hover:text-primary">
+          <Link href="/terms" className="underline hover:text-green-600">
             conditions d'utilisation
           </Link>{' '}
           et notre{' '}
-          <Link href="/privacy" className="underline hover:text-primary">
+          <Link href="/privacy" className="underline hover:text-green-600">
             politique de confidentialité
           </Link>
         </div>

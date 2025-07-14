@@ -16,14 +16,14 @@ export default function PricingPage() {
         <section className="container mx-auto px-4 py-16 lg:py-24">
           <div className="text-center space-y-8">
             <div className="flex items-center justify-center space-x-2">
-              <Badge variant="outline" className="text-sm">
+              <Badge variant="outline" className="text-sm border-green-600 text-green-600">
                 Tarification transparente
               </Badge>
             </div>
             
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
               Des plans adaptés à 
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                 {" "}chaque pharmacie
               </span>
             </h1>
@@ -33,7 +33,7 @@ export default function PricingPage() {
               Aucune carte de crédit requise pour l'essai gratuit.
             </p>
 
-            <Button variant="outline" asChild>
+            <Button variant="outline" asChild className="border-green-600 text-green-600 hover:bg-green-50">
               <Link href="/" className="inline-flex items-center">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Retour à l'accueil

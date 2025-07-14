@@ -223,7 +223,7 @@ function DashboardContent() {
             <Button
               onClick={handleRetryProfile}
               disabled={retryLoading}
-              className="w-full"
+              className="w-full bg-green-600 hover:bg-green-700"
             >
               {retryLoading ? (
                 <>
@@ -240,7 +240,7 @@ function DashboardContent() {
             <Button
               onClick={debugProfile}
               variant="outline"
-              className="w-full"
+              className="w-full border-green-600 text-green-600 hover:bg-green-50"
             >
               Debug Profil
             </Button>
@@ -271,7 +271,7 @@ function DashboardContent() {
             <CardDescription>Veuillez vous connecter pour accéder au dashboard</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button asChild className="w-full">
+            <Button asChild className="w-full bg-green-600 hover:bg-green-700">
               <a href="/login?redirectTo=/dashboard">Se connecter</a>
             </Button>
           </CardContent>
@@ -290,7 +290,7 @@ function DashboardContent() {
               <CardDescription>Votre code pharmacie est manquant</CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <Button asChild className="w-full">
+              <Button asChild className="w-full bg-green-600 hover:bg-green-700">
                 <a href="/complete-pharmacy-profile">Compléter le profil</a>
               </Button>
             </CardContent>
@@ -309,7 +309,7 @@ function DashboardContent() {
             <CardDescription>Veuillez compléter les informations de votre pharmacie</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button asChild className="w-full">
+            <Button asChild className="w-full bg-green-600 hover:bg-green-700">
               <a href="/complete-pharmacy-profile">Configurer ma pharmacie</a>
             </Button>
           </CardContent>
@@ -334,7 +334,7 @@ function DashboardContent() {
               </Button>
               <div>
                 <h1 className="text-xl font-semibold flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-primary" />
+                  <MessageSquare className="h-5 w-5 text-green-600" />
                   Chat Chifa.ai
                 </h1>
                 {pharmacyStatus === 'active_demo' && (
