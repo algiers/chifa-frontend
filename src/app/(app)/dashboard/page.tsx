@@ -346,7 +346,7 @@ function DashboardContent() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <PharmacyConnectionStatus apiUrl={LOCAL_API_URL} />
+              <PharmacyConnectionStatus />
               <ThemeToggle />
               <Button variant="ghost" size="icon" asChild>
                 <a href="/settings">
