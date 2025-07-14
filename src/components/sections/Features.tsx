@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Bot, BarChart3, MessageSquare, Shield } from "lucide-react"
+import React from "react"
 
 const features = [
   {
@@ -43,7 +44,7 @@ export function Features() {
           <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-shadow">
             <CardHeader>
               <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <feature.icon className="h-6 w-6 text-primary" />
+                {feature.icon && React.createElement(feature.icon, { className: 'h-6 w-6 text-primary' })}
               </div>
               <CardTitle className="text-xl">{feature.title}</CardTitle>
             </CardHeader>

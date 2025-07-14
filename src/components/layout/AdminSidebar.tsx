@@ -73,7 +73,8 @@ export default function AdminSidebar() {
                   ${pathname === item.href ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-700'}`}
                 onClick={() => isMobileSidebarOpen && setMobileSidebarOpen(false)}
               >
-                {item.icon && <item.icon className="w-5 h-5" />}
+                {/* Correction de l'icône dynamique */}
+                {item.icon && React.createElement(item.icon, { className: 'w-5 h-5' })}
                 <span>{item.label}</span>
               </Link>
             </li>

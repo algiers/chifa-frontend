@@ -57,7 +57,7 @@ export default function Sidebar() {
                   ${pathname === item.href ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'}`}
                 onClick={() => isMobileSidebarOpen && setMobileSidebarOpen(false)} // Ferme au clic sur un lien
               >
-                {item.icon && <item.icon className="w-5 h-5" />}
+                {item.icon && React.createElement(item.icon, { className: 'w-5 h-5' })}
                 <span>{item.label}</span>
               </Link>
             </li>

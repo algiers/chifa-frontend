@@ -3,6 +3,7 @@
 import { Separator } from "@/components/ui/separator"
 import { Github, Twitter, Linkedin, Mail } from "lucide-react"
 import Link from "next/link"
+import React from "react"
 
 const footerLinks = {
   produit: [
@@ -62,7 +63,7 @@ export function Footer() {
                   href={link.href}
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <link.icon className="h-5 w-5" />
+                  {link.icon && React.createElement(link.icon, { className: 'h-5 w-5' })}
                   <span className="sr-only">{link.name}</span>
                 </Link>
               ))}
