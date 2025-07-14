@@ -47,10 +47,5 @@
     "eslint": "^8.0.0",
     "eslint-config-next": "14.2.4",
     "typescript": "^5"
-  },
-  "overrides": {
-    "unrs-resolver": {
-      "napi-postinstall": "echo 'Skipping napi-postinstall for unrs-resolver'"
-    }
   }
 }
