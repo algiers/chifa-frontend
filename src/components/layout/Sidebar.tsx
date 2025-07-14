@@ -16,7 +16,8 @@ interface NavItem {
 // Helper function pour créer les icônes avec le bon typage
 const createIcon = (IconComponent: React.ElementType | undefined, className: string) => {
   if (!IconComponent) return null;
-  return <IconComponent className={className} />;
+  const Component = IconComponent as React.ComponentType<{ className?: string }>;
+  return <Component className={className} />;
 };
 
 const navItems: NavItem[] = [
