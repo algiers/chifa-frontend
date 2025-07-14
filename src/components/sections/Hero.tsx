@@ -18,7 +18,7 @@ export function Hero() {
         {/* Main Title */}
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
           Interrogez votre pharmacie
-          <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             {" "}en langage naturel
           </span>
         </h1>

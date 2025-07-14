@@ -20,8 +20,23 @@
     ],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "baseUrl": ".",
+    "types": ["node", "react", "react-dom"]
   },
-  "include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", ".next/types/**/*.ts", "next.config.mjs"],
-  "exclude": ["node_modules", "supabase/**/*", "**/supabase/**/*"]
+  "include": [
+    "next-env.d.ts", 
+    "src/**/*.ts", 
+    "src/**/*.tsx", 
+    "src/types/global.d.ts",
+    ".next/types/**/*.ts", 
+    "next.config.mjs"
+  ],
+  "exclude": [
+    "node_modules", 
+    "supabase/**/*", 
+    "**/supabase/**/*",
+    ".next",
+    "out"
+  ]
 }
