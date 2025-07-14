@@ -57,6 +57,16 @@ function generateVirtualKey(codePs: string): string {
   return `sk-${codePs}-${timestamp}-${randomSuffix}`;
 }
 
+// Helper pour générer un mot de passe temporaire sécurisé
+function generateTempPassword(length = 12) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';
+  let pwd = '';
+  for (let i = 0; i < length; i++) {
+    pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pwd;
+}
+
 // GET /api/admin/pharmacies - Lister toutes les pharmacies ou récupérer une pharmacie spécifique
 export async function GET(request: NextRequest) {
   const user = await verifyAdminUser(request);
@@ -155,11 +165,14 @@ export async function POST(request: NextRequest) {
       virtual_key
     } = await request.json();
 
-    if (!email || !password || !full_name || !pharmacy_name || !code_ps) {
+    if (!email || !full_name || !pharmacy_name || !code_ps) {
       return NextResponse.json({ 
-        error: 'Missing required fields: email, password, full_name, pharmacy_name, code_ps' 
+        error: 'Missing required fields: email, full_name, pharmacy_name, code_ps' 
       }, { status: 400 });
     }
+
+    // Générer un mot de passe temporaire si non fourni
+    const tempPassword = password || generateTempPassword();
 
     // Vérifier que le code PS n'existe pas déjà
     const { data: existingPharmacy } = await supabaseAdmin
@@ -177,7 +190,7 @@ export async function POST(request: NextRequest) {
     // Créer l'utilisateur dans auth.users
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password,
+      password: tempPassword,
       email_confirm: true,
       user_metadata: {
         full_name,
@@ -227,7 +240,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: 'Pharmacie créée avec succès',
       pharmacy: profileData,
-      virtual_key: finalVirtualKey
+      virtual_key: finalVirtualKey,
+      temp_password: tempPassword // Afficher à l'admin
     });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

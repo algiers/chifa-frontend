@@ -181,7 +181,28 @@ export default function AdminPharmaciesPage() {
 
       const result = await response.json();
       toast.success(result.message);
-      
+      // Afficher le mot de passe temporaire s'il est retourné
+      if (result.temp_password) {
+        toast(
+          <div>
+            <div className="font-semibold mb-1">Mot de passe temporaire généré :</div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono bg-gray-100 px-2 py-1 rounded text-sm select-all">{result.temp_password}</span>
+              <button
+                className="ml-2 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                onClick={() => {
+                  navigator.clipboard.writeText(result.temp_password);
+                  toast.success('Mot de passe copié !');
+                }}
+              >
+                Copier
+              </button>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">Transmettez ce mot de passe à la pharmacie. Il pourra être changé après connexion.</div>
+          </div>,
+          { duration: 15000 }
+        );
+      }
       // Réinitialiser le formulaire
       setFormData({
         email: '',
