@@ -140,7 +140,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col flex-1">
       {/* Header */}
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3">
@@ -172,136 +172,138 @@ export default function AdminDashboardPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Pharmacies</p>
-                  <p className="text-3xl font-bold">{stats?.totalPharmacies}</p>
+      {/* Main Content (scrollable) */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="container mx-auto px-4 py-8 space-y-8">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Pharmacies</p>
+                    <p className="text-3xl font-bold">{stats?.totalPharmacies}</p>
+                  </div>
+                  <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
+                    <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
                 </div>
-                <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
-                  <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pharmacies Actives</p>
-                  <p className="text-3xl font-bold text-green-600">{stats?.activePharmacies}</p>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Pharmacies Actives</p>
+                    <p className="text-3xl font-bold text-green-600">{stats?.activePharmacies}</p>
+                  </div>
+                  <div className="p-3 rounded-full bg-green-100 dark:bg-green-900">
+                    <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  </div>
                 </div>
-                <div className="p-3 rounded-full bg-green-100 dark:bg-green-900">
-                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">En Attente</p>
-                  <p className="text-3xl font-bold text-yellow-600">{stats?.pendingPharmacies}</p>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">En Attente</p>
+                    <p className="text-3xl font-bold text-yellow-600">{stats?.pendingPharmacies}</p>
+                  </div>
+                  <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900">
+                    <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                  </div>
                 </div>
-                <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900">
-                  <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Suspendues</p>
-                  <p className="text-3xl font-bold text-red-600">{stats?.suspendedPharmacies}</p>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Suspendues</p>
+                    <p className="text-3xl font-bold text-red-600">{stats?.suspendedPharmacies}</p>
+                  </div>
+                  <div className="p-3 rounded-full bg-red-100 dark:bg-red-900">
+                    <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                  </div>
                 </div>
-                <div className="p-3 rounded-full bg-red-100 dark:bg-red-900">
-                  <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
-                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quick Actions */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Actions Rapides
+              </CardTitle>
+              <CardDescription>
+                Accès rapide aux fonctionnalités d'administration principales
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Button
+                  variant="outline"
+                  className="h-auto p-6 flex flex-col items-start space-y-2 hover:bg-accent transition-colors"
+                  asChild
+                >
+                  <a href="/admin/pharmacies">
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
+                        <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">Gérer les Pharmacies</p>
+                        <p className="text-sm text-muted-foreground">Approuver, suspendre ou rejeter</p>
+                      </div>
+                    </div>
+                  </a>
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  className="h-auto p-6 flex flex-col items-start space-y-2 hover:bg-accent transition-colors"
+                  asChild
+                >
+                  <a href="/admin/users">
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900">
+                        <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">Gérer les Utilisateurs</p>
+                        <p className="text-sm text-muted-foreground">Voir et gérer les comptes</p>
+                      </div>
+                    </div>
+                  </a>
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  className="h-auto p-6 flex flex-col items-start space-y-2 hover:bg-accent transition-colors"
+                  asChild
+                >
+                  <a href="/admin/analytics">
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900">
+                        <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">Analyses</p>
+                        <p className="text-sm text-muted-foreground">Statistiques détaillées</p>
+                      </div>
+                    </div>
+                  </a>
+                </Button>
               </div>
             </CardContent>
           </Card>
         </div>
-
-        {/* Quick Actions */}
-        <Card className="border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Actions Rapides
-            </CardTitle>
-            <CardDescription>
-              Accès rapide aux fonctionnalités d'administration principales
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button
-                variant="outline"
-                className="h-auto p-6 flex flex-col items-start space-y-2 hover:bg-accent transition-colors"
-                asChild
-              >
-                <a href="/admin/pharmacies">
-                  <div className="flex items-center gap-3 w-full">
-                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
-                      <Building2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium">Gérer les Pharmacies</p>
-                      <p className="text-sm text-muted-foreground">Approuver, suspendre ou rejeter</p>
-                    </div>
-                  </div>
-                </a>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="h-auto p-6 flex flex-col items-start space-y-2 hover:bg-accent transition-colors"
-                asChild
-              >
-                <a href="/admin/users">
-                  <div className="flex items-center gap-3 w-full">
-                    <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900">
-                      <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium">Gérer les Utilisateurs</p>
-                      <p className="text-sm text-muted-foreground">Voir et gérer les comptes</p>
-                    </div>
-                  </div>
-                </a>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="h-auto p-6 flex flex-col items-start space-y-2 hover:bg-accent transition-colors"
-                asChild
-              >
-                <a href="/admin/analytics">
-                  <div className="flex items-center gap-3 w-full">
-                    <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900">
-                      <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium">Analyses</p>
-                      <p className="text-sm text-muted-foreground">Statistiques détaillées</p>
-                    </div>
-                  </div>
-                </a>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
