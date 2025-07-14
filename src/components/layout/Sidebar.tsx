@@ -13,11 +13,16 @@ interface NavItem {
   icon?: React.ElementType; // Décommenter et typer l'icône
 }
 
+// Helper function pour créer les icônes avec le bon typage
+const createIcon = (IconComponent: React.ElementType | undefined, className: string) => {
+  if (!IconComponent) return null;
+  return <IconComponent className={className} />;
+};
+
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/history', label: 'Historique des Chats', icon: History },
+  { href: '/history', label: 'Historique', icon: History },
   { href: '/settings', label: 'Paramètres', icon: Settings },
-  // Ajoutez d'autres liens de navigation ici
 ];
 
 export default function Sidebar() {
@@ -32,19 +37,26 @@ export default function Sidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, setMobileSidebarOpen]);
 
-
   const sidebarContent = (
     <>
       <div className="flex justify-between items-center md:block">
-        <h2 className="text-lg font-semibold mb-4 px-2">Menu</h2>
+        <div className="flex items-center space-x-2 mb-6 px-3">
+          <div className="p-2 bg-blue-600 rounded-lg">
+            <LayoutDashboard className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white">Chifa.ai</h2>
+            <p className="text-xs text-gray-400">Assistant IA</p>
+          </div>
+        </div>
         <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden text-gray-300 hover:text-white"
-            onClick={toggleMobileSidebar}
-            aria-label="Fermer le menu"
-          >
-            <X className="h-6 w-6" />
+          variant="ghost"
+          size="icon"
+          className="md:hidden text-gray-300 hover:text-white"
+          onClick={toggleMobileSidebar}
+          aria-label="Fermer le menu"
+        >
+          <X className="h-6 w-6" />
         </Button>
       </div>
       <nav>
@@ -53,18 +65,17 @@ export default function Sidebar() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                className={`flex items-center space-x-2 px-2 py-2.5 rounded-md hover:bg-gray-700 transition-colors
-                  ${pathname === item.href ? 'bg-gray-900 text-white' : 'text-gray-300 hover:text-white'}`}
-                onClick={() => isMobileSidebarOpen && setMobileSidebarOpen(false)} // Ferme au clic sur un lien
+                className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-gray-700 transition-colors duration-200
+                  ${pathname === item.href ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-700'}`}
+                onClick={() => isMobileSidebarOpen && setMobileSidebarOpen(false)}
               >
-                {item.icon && React.createElement(item.icon, { className: 'w-5 h-5' })}
+                {createIcon(item.icon, 'w-5 h-5')}
                 <span>{item.label}</span>
               </Link>
             </li>
           ))}
         </ul>
       </nav>
-      {/* Vous pouvez ajouter d'autres sections ici, comme des informations utilisateur, etc. */}
     </>
   );
 

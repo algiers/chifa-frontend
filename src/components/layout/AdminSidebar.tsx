@@ -21,6 +21,12 @@ interface NavItem {
   icon?: React.ElementType;
 }
 
+// Helper function pour créer les icônes avec le bon typage
+const createIcon = (IconComponent: React.ElementType | undefined, className: string) => {
+  if (!IconComponent) return null;
+  return <IconComponent className={className} />;
+};
+
 const adminNavItems: NavItem[] = [
   { href: '/admin/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/admin/pharmacies', label: 'Pharmacies', icon: Building2 },
@@ -73,8 +79,7 @@ export default function AdminSidebar() {
                   ${pathname === item.href ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-700'}`}
                 onClick={() => isMobileSidebarOpen && setMobileSidebarOpen(false)}
               >
-                {/* Correction de l'icône dynamique */}
-                {item.icon && React.createElement(item.icon, { className: 'w-5 h-5' })}
+                {createIcon(item.icon, 'w-5 h-5')}
                 <span>{item.label}</span>
               </Link>
             </li>

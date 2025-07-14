@@ -1,155 +1,117 @@
 "use client"
 
-import { Separator } from "@/components/ui/separator"
-import { Github, Twitter, Linkedin, Mail } from "lucide-react"
-import Link from "next/link"
-import React from "react"
+import React from "react";
+import Link from "next/link";
+import { Github, Twitter, Linkedin, Mail } from "lucide-react";
 
-const footerLinks = {
-  produit: [
-    { name: "Fonctionnalités", href: "#features" },
-    { name: "Tarifs", href: "/pricing" },
-    { name: "Documentation", href: "/docs" },
-    { name: "API", href: "/api-docs" }
-  ],
-  entreprise: [
-    { name: "À propos", href: "/about" },
-    { name: "Blog", href: "/blog" },
-    { name: "Carrières", href: "/careers" },
-    { name: "Presse", href: "/press" }
-  ],
-  support: [
-    { name: "Centre d'aide", href: "/help" },
-    { name: "Contact", href: "/contact" },
-    { name: "Statut", href: "/status" },
-    { name: "Formation", href: "/training" }
-  ],
-  legal: [
-    { name: "Politique de confidentialité", href: "/privacy" },
-    { name: "Conditions d'utilisation", href: "/terms" },
-    { name: "Mentions légales", href: "/legal" },
-    { name: "Cookies", href: "/cookies" }
-  ]
-}
+// Helper function pour créer les icônes avec le bon typage
+const createIcon = (IconComponent: React.ElementType | undefined, className: string) => {
+  if (!IconComponent) return null;
+  return <IconComponent className={className} />;
+};
 
 const socialLinks = [
-  { name: "Twitter", href: "#", icon: Twitter },
-  { name: "LinkedIn", href: "#", icon: Linkedin },
-  { name: "GitHub", href: "#", icon: Github },
-  { name: "Email", href: "mailto:contact@chifa.ai", icon: Mail }
-]
+  { href: "https://github.com", icon: Github, label: "GitHub" },
+  { href: "https://twitter.com", icon: Twitter, label: "Twitter" },
+  { href: "https://linkedin.com", icon: Linkedin, label: "LinkedIn" },
+  { href: "mailto:contact@chifa.ai", icon: Mail, label: "Email" },
+];
+
+const footerLinks = [
+  {
+    title: "Produit",
+    links: [
+      { href: "/features", label: "Fonctionnalités" },
+      { href: "/pricing", label: "Tarifs" },
+      { href: "/demo", label: "Démo" },
+    ],
+  },
+  {
+    title: "Support",
+    links: [
+      { href: "/docs", label: "Documentation" },
+      { href: "/contact", label: "Contact" },
+      { href: "/help", label: "Aide" },
+    ],
+  },
+  {
+    title: "Entreprise",
+    links: [
+      { href: "/about", label: "À propos" },
+      { href: "/blog", label: "Blog" },
+      { href: "/careers", label: "Carrières" },
+    ],
+  },
+];
 
 export function Footer() {
   return (
-    <footer className="border-t bg-background">
-      <div className="container mx-auto px-4 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-          {/* Brand */}
-          <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center space-x-2 mb-4">
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">C</span>
+    <footer className="bg-gray-900 text-white">
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Logo et description */}
+          <div className="col-span-1 md:col-span-2">
+            <div className="flex items-center space-x-2 mb-4">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">C</span>
               </div>
-              <span className="font-bold text-xl">Chifa.ai</span>
-            </Link>
-            <p className="text-muted-foreground text-sm mb-4">
-              L'IA au service des pharmacies algériennes. 
-              Modernisez votre gestion avec notre solution intelligente.
+              <span className="text-xl font-bold">Chifa.ai</span>
+            </div>
+            <p className="text-gray-400 mb-6 max-w-md">
+              L'intelligence artificielle qui révolutionne la gestion de votre pharmacie. 
+              Interrogez votre base de données en langage naturel.
             </p>
             <div className="flex space-x-4">
               {socialLinks.map((link) => (
                 <Link
-                  key={link.name}
+                  key={link.href}
                   href={link.href}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-gray-400 hover:text-white transition-colors"
+                  aria-label={link.label}
                 >
-                  {link.icon && React.createElement(link.icon, { className: 'h-5 w-5' })}
-                  <span className="sr-only">{link.name}</span>
+                  {createIcon(link.icon, 'h-5 w-5')}
                 </Link>
               ))}
             </div>
           </div>
 
-          {/* Product */}
-          <div>
-            <h3 className="font-semibold mb-4">Produit</h3>
-            <ul className="space-y-2">
-              {footerLinks.produit.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors text-sm"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h3 className="font-semibold mb-4">Entreprise</h3>
-            <ul className="space-y-2">
-              {footerLinks.entreprise.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors text-sm"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <h3 className="font-semibold mb-4">Support</h3>
-            <ul className="space-y-2">
-              {footerLinks.support.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors text-sm"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Legal */}
-          <div>
-            <h3 className="font-semibold mb-4">Légal</h3>
-            <ul className="space-y-2">
-              {footerLinks.legal.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors text-sm"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Liens de navigation */}
+          {footerLinks.map((section) => (
+            <div key={section.title}>
+              <h3 className="font-semibold mb-4">{section.title}</h3>
+              <ul className="space-y-2">
+                {section.links.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        <Separator className="my-8" />
-
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} Chifa.ai. Tous droits réservés.
-          </p>
-          <p className="text-muted-foreground text-sm mt-2 md:mt-0">
-            Fait avec ❤️ pour les pharmacies algériennes
-          </p>
+        {/* Séparateur */}
+        <div className="border-t border-gray-800 mt-8 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-400 text-sm">
+              © 2024 Chifa.ai. Tous droits réservés.
+            </p>
+            <div className="flex space-x-6 mt-4 md:mt-0">
+              <Link href="/privacy" className="text-gray-400 hover:text-white text-sm">
+                Confidentialité
+              </Link>
+              <Link href="/terms" className="text-gray-400 hover:text-white text-sm">
+                Conditions d'utilisation
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </footer>
-  )
+  );
 }
