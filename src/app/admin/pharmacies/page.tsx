@@ -39,12 +39,22 @@ interface EditPharmacyData {
   virtual_key: string;
 }
 
+// Helper pour générer un mot de passe temporaire sécurisé
+function generateTempPassword(length = 12) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';
+  let pwd = '';
+  for (let i = 0; i < length; i++) {
+    pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pwd;
+}
+
 export default function AdminPharmaciesPage() {
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  
+
   // États pour la création de pharmacie
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
@@ -75,40 +85,51 @@ export default function AdminPharmaciesPage() {
   // Fonction pour auto-générer la clé virtuelle basée sur le code PS
   const handleCodePsChange = (value: string) => {
     setFormData({
-      ...formData, 
+      ...formData,
       code_ps: value,
       virtual_key: value ? generateVirtualKey(value) : ''
     });
   };
 
   const fetchPharmacies = async () => {
+    console.log('[AdminPharmacies] Starting fetchPharmacies...');
     setLoading(true);
     setError(null);
-    
+
     try {
       const supabase = createSupabaseBrowserClient();
+      console.log('[AdminPharmacies] Getting session...');
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
+        console.error('[AdminPharmacies] No session found');
         throw new Error('Non authentifié');
       }
 
+      console.log('[AdminPharmacies] Session found, making API call...');
       const response = await fetch('/api/admin/pharmacies', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
       });
 
+      console.log('[AdminPharmacies] API response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Erreur lors de la récupération des pharmacies');
+        const errorText = await response.text();
+        console.error('[AdminPharmacies] API error:', errorText);
+        throw new Error(`Erreur lors de la récupération des pharmacies: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('[AdminPharmacies] API data received:', data);
       setPharmacies(data);
     } catch (err) {
+      console.error('[AdminPharmacies] Error in fetchPharmacies:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
       setPharmacies([]);
     } finally {
+      console.log('[AdminPharmacies] fetchPharmacies completed');
       setLoading(false);
     }
   };
@@ -119,11 +140,11 @@ export default function AdminPharmaciesPage() {
 
   const handleStatusChange = async (id: string, newStatus: 'pending' | 'active' | 'suspended' | 'rejected') => {
     setActionLoading(id + newStatus);
-    
+
     try {
       const supabase = createSupabaseBrowserClient();
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         throw new Error('Non authentifié');
       }
@@ -160,7 +181,7 @@ export default function AdminPharmaciesPage() {
     try {
       const supabase = createSupabaseBrowserClient();
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         throw new Error('Non authentifié');
       }
@@ -224,15 +245,19 @@ export default function AdminPharmaciesPage() {
   };
 
   const handleEditPharmacy = async (pharmacy: Pharmacy) => {
+    console.log('[AdminPharmacies] handleEditPharmacy called with pharmacy:', pharmacy);
     // Récupérer la pharmacie avec sa clé virtuelle via l'API
     try {
       const supabase = createSupabaseBrowserClient();
+      console.log('[AdminPharmacies] Getting session for edit...');
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
+        console.error('[AdminPharmacies] No session for edit');
         throw new Error('Non authentifié');
       }
 
+      console.log('[AdminPharmacies] Making API call to get pharmacy details for ID:', pharmacy.id);
       // Récupérer les données complètes de la pharmacie avec la clé virtuelle
       const response = await fetch(`/api/admin/pharmacies?id=${pharmacy.id}`, {
         headers: {
@@ -240,13 +265,18 @@ export default function AdminPharmaciesPage() {
         },
       });
 
+      console.log('[AdminPharmacies] Edit API response status:', response.status);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[AdminPharmacies] Edit API error:', errorText);
         throw new Error('Erreur lors de la récupération des données');
       }
 
       const pharmacyData = await response.json();
+      console.log('[AdminPharmacies] Edit API data received:', pharmacyData);
 
-      setEditData({
+      const editDataToSet = {
         id: pharmacy.id,
         full_name: pharmacyData.full_name || '',
         pharmacy_name: pharmacyData.pharmacy_name || '',
@@ -255,9 +285,14 @@ export default function AdminPharmaciesPage() {
         phone_number: pharmacyData.phone_number || '',
         email: pharmacyData.email || '',
         virtual_key: pharmacyData.virtual_key || '',
-      });
+      };
+      
+      console.log('[AdminPharmacies] Setting edit data:', editDataToSet);
+      setEditData(editDataToSet);
+      console.log('[AdminPharmacies] Setting showEditForm to true');
       setShowEditForm(true);
     } catch (err) {
+      console.error('[AdminPharmacies] Error in handleEditPharmacy:', err);
       toast.error('Erreur lors de la récupération des données');
     }
   };
@@ -271,7 +306,7 @@ export default function AdminPharmaciesPage() {
     try {
       const supabase = createSupabaseBrowserClient();
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         throw new Error('Non authentifié');
       }
@@ -292,7 +327,7 @@ export default function AdminPharmaciesPage() {
 
       const result = await response.json();
       toast.success(result.message);
-      
+
       setShowEditForm(false);
       setEditData(null);
       await fetchPharmacies();
@@ -300,6 +335,86 @@ export default function AdminPharmaciesPage() {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
     } finally {
       setEditLoading(false);
+    }
+  };
+
+  // Ajout de la fonction de réinitialisation du mot de passe
+  const [resetLoading, setResetLoading] = useState(false);
+  const handleResetPassword = async () => {
+    if (!editData || resetLoading) return;
+    setResetLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Non authentifié');
+
+      console.log(`[ADMIN] Resetting password for pharmacy ID: ${editData.id}`);
+
+      const response = await fetch('/api/admin/pharmacies', {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: editData.id, password: true }),
+      });
+
+      console.log(`[ADMIN] Password reset response status: ${response.status}`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[ADMIN] Password reset error:', errorData);
+        throw new Error(errorData.error || 'Erreur lors de la réinitialisation');
+      }
+
+      const result = await response.json();
+      console.log('[ADMIN] Password reset result:', result);
+
+      // Fermer la modal d'abord pour éviter les problèmes de z-index
+      setShowEditForm(false);
+      setEditData(null);
+
+      if (result.temp_password) {
+        // Attendre un peu que la modal se ferme avant d'afficher le toast
+        setTimeout(() => {
+          toast(
+            <div className="bg-white border border-gray-200 shadow-lg rounded-lg p-4">
+              <div className="font-semibold mb-2 text-green-800">✅ Nouveau mot de passe temporaire généré :</div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="font-mono bg-gray-100 px-3 py-2 rounded text-sm select-all border">{result.temp_password}</span>
+                <button
+                  className="px-3 py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                  onClick={() => {
+                    navigator.clipboard.writeText(result.temp_password);
+                    toast.success('Mot de passe copié dans le presse-papiers !');
+                  }}
+                >
+                  📋 Copier
+                </button>
+              </div>
+              <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
+                <div><strong>📧 Email:</strong> {editData.email}</div>
+                <div className="mt-1">💡 Transmettez ces identifiants à la pharmacie. Le mot de passe pourra être changé après connexion.</div>
+              </div>
+            </div>,
+            {
+              duration: 25000,
+              position: 'top-center',
+              style: {
+                zIndex: 9999,
+                maxWidth: '500px'
+              }
+            }
+          );
+        }, 300);
+      } else {
+        toast.success(result.message || 'Mot de passe réinitialisé avec succès');
+      }
+    } catch (err) {
+      console.error('[ADMIN] Password reset error:', err);
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la réinitialisation');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -326,7 +441,12 @@ export default function AdminPharmaciesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Chargement des pharmacies...</div>
+        <div className="text-center">
+          <div className="text-gray-500 mb-4">Chargement des pharmacies...</div>
+          <div className="text-xs text-gray-400">
+            Debug: Loading={loading.toString()}, Error={error || 'none'}, Pharmacies count={pharmacies.length}
+          </div>
+        </div>
       </div>
     );
   }
@@ -335,12 +455,27 @@ export default function AdminPharmaciesPage() {
     return (
       <div className="bg-red-50 border border-red-200 rounded-md p-4">
         <div className="text-red-600">Erreur : {error}</div>
-        <button 
-          onClick={fetchPharmacies}
-          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          Réessayer
-        </button>
+        <div className="mt-4 space-x-2">
+          <button
+            onClick={fetchPharmacies}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Réessayer
+          </button>
+          <button
+            onClick={() => {
+              console.log('=== DEBUG INFO ===');
+              console.log('Current error:', error);
+              console.log('Loading state:', loading);
+              console.log('Pharmacies:', pharmacies);
+              console.log('Window location:', window.location.href);
+              console.log('=== END DEBUG ===');
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Debug Info
+          </button>
+        </div>
       </div>
     );
   }
@@ -376,7 +511,7 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
@@ -388,7 +523,7 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="password"
                     value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
@@ -400,7 +535,7 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="text"
                     value={formData.full_name}
-                    onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
@@ -424,7 +559,7 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="text"
                     value={formData.pharmacy_name}
-                    onChange={(e) => setFormData({...formData, pharmacy_name: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, pharmacy_name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
@@ -436,7 +571,7 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="tel"
                     value={formData.phone_number}
-                    onChange={(e) => setFormData({...formData, phone_number: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -449,14 +584,14 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="text"
                     value={formData.virtual_key}
-                    onChange={(e) => setFormData({...formData, virtual_key: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, virtual_key: e.target.value })}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="sk-..."
                     required
                   />
                   <button
                     type="button"
-                    onClick={() => setFormData({...formData, virtual_key: generateVirtualKey(formData.code_ps)})}
+                    onClick={() => setFormData({ ...formData, virtual_key: generateVirtualKey(formData.code_ps) })}
                     className="px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
                     disabled={!formData.code_ps}
                   >
@@ -473,7 +608,7 @@ export default function AdminPharmaciesPage() {
                 </label>
                 <textarea
                   value={formData.pharmacy_address}
-                  onChange={(e) => setFormData({...formData, pharmacy_address: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, pharmacy_address: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
                   required
@@ -514,7 +649,7 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="email"
                     value={editData.email}
-                    onChange={(e) => setEditData({...editData, email: e.target.value})}
+                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -525,7 +660,7 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="text"
                     value={editData.full_name}
-                    onChange={(e) => setEditData({...editData, full_name: e.target.value})}
+                    onChange={(e) => setEditData({ ...editData, full_name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -536,7 +671,7 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="text"
                     value={editData.code_ps}
-                    onChange={(e) => setEditData({...editData, code_ps: e.target.value})}
+                    onChange={(e) => setEditData({ ...editData, code_ps: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -547,7 +682,7 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="text"
                     value={editData.pharmacy_name}
-                    onChange={(e) => setEditData({...editData, pharmacy_name: e.target.value})}
+                    onChange={(e) => setEditData({ ...editData, pharmacy_name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -558,7 +693,7 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="tel"
                     value={editData.phone_number}
-                    onChange={(e) => setEditData({...editData, phone_number: e.target.value})}
+                    onChange={(e) => setEditData({ ...editData, phone_number: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -569,7 +704,7 @@ export default function AdminPharmaciesPage() {
                   <input
                     type="text"
                     value={editData.virtual_key}
-                    onChange={(e) => setEditData({...editData, virtual_key: e.target.value})}
+                    onChange={(e) => setEditData({ ...editData, virtual_key: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="sk-..."
                   />
@@ -581,29 +716,39 @@ export default function AdminPharmaciesPage() {
                 </label>
                 <textarea
                   value={editData.pharmacy_address}
-                  onChange={(e) => setEditData({...editData, pharmacy_address: e.target.value})}
+                  onChange={(e) => setEditData({ ...editData, pharmacy_address: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
                 />
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-between gap-2 mt-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowEditForm(false);
-                    setEditData(null);
-                  }}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                  onClick={handleResetPassword}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
+                  disabled={resetLoading}
                 >
-                  Annuler
+                  {resetLoading ? 'Réinitialisation...' : 'Réinitialiser le mot de passe'}
                 </button>
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {editLoading ? 'Mise à jour...' : 'Mettre à jour'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditForm(false);
+                      setEditData(null);
+                    }}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {editLoading ? 'Mise à jour...' : 'Mettre à jour'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -675,7 +820,7 @@ export default function AdminPharmaciesPage() {
                         >
                           Modifier
                         </button>
-                        
+
                         {/* Bouton Approuver visible si le statut n'est pas déjà 'active' */}
                         {pharmacy.pharmacy_status !== 'active' && (
                           <button
@@ -717,7 +862,7 @@ export default function AdminPharmaciesPage() {
               ))}
             </tbody>
           </table>
-          
+
           {pharmacies.length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-500">Aucune pharmacie trouvée</div>

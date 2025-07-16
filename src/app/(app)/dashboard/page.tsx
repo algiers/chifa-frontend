@@ -36,6 +36,7 @@ function DashboardContent() {
 
   // Debug logs pour comprendre l'état du profil
   console.log('[Dashboard] Debug - User:', user?.id, 'PharmacyStatus:', pharmacyStatus, 'CodePs:', codePs, 'Error:', authError);
+  console.log('[Dashboard] Debug - Full auth state:', { user: !!user, pharmacyStatus, codePs, demoCreditsRemaining, isAdmin, authError });
   const { setMessages, setCurrentConversationId, clearChat, setLoading: setChatLoading, setError: setChatError } = useChatStore();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -214,7 +215,7 @@ function DashboardContent() {
             <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="h-8 w-8 text-destructive" />
             </div>
-            <CardTitle className="text-xl font-bold">Erreur de profil</CardTitle>
+            <CardTitle className="text-xl font-bold">Erreur Profil</CardTitle>
             <CardDescription>
               {errorMsg || 'Erreur inconnue lors du chargement de votre profil'}
             </CardDescription>
@@ -228,7 +229,7 @@ function DashboardContent() {
               {retryLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Nouvelle tentative...
+                  Tentative...
                 </>
               ) : (
                 <>
@@ -255,7 +256,7 @@ function DashboardContent() {
         <div className="min-h-screen flex items-center justify-center bg-muted/50">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Chargement des informations utilisateur...</p>
+            <p className="text-muted-foreground">Chargement profil...</p>
           </div>
         </div>
       );
@@ -267,8 +268,8 @@ function DashboardContent() {
             <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="h-8 w-8 text-destructive" />
             </div>
-            <CardTitle>Connexion requise</CardTitle>
-            <CardDescription>Veuillez vous connecter pour accéder au dashboard</CardDescription>
+            <CardTitle>Connexion Analytics</CardTitle>
+            <CardDescription>Connectez-vous pour accéder aux analytics CHIFA</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <Button asChild className="w-full bg-green-600 hover:bg-green-700">
@@ -280,8 +281,12 @@ function DashboardContent() {
     );
   }
 
+  console.log('[Dashboard] Checking active status - pharmacyStatus:', pharmacyStatus, 'codePs:', codePs);
+  
   if (pharmacyStatus === 'active' || pharmacyStatus === 'active_demo') {
+    console.log('[Dashboard] Status is active, checking codePs...');
     if (!codePs) {
+      console.log('[Dashboard] CodePs is missing, showing configuration incomplete');
       return (
         <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
           <Card className="border-0 shadow-xl max-w-md w-full">
@@ -289,10 +294,30 @@ function DashboardContent() {
               <CardTitle>Configuration incomplète</CardTitle>
               <CardDescription>Votre code pharmacie est manquant</CardDescription>
             </CardHeader>
-            <CardContent className="text-center">
+            <CardContent className="text-center space-y-4">
               <Button asChild className="w-full bg-green-600 hover:bg-green-700">
                 <a href="/complete-pharmacy-profile">Compléter le profil</a>
               </Button>
+              <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+                Debug: Status={pharmacyStatus}, CodePs={codePs || 'null'}, User={user?.id}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={debugProfile}
+                  variant="outline"
+                  className="flex-1 border-blue-600 text-blue-600 hover:bg-blue-50"
+                >
+                  Debug Profil
+                </Button>
+                <Button
+                  onClick={handleRetryProfile}
+                  disabled={retryLoading}
+                  variant="outline"
+                  className="flex-1 border-green-600 text-green-600 hover:bg-green-50"
+                >
+                  {retryLoading ? 'Chargement...' : 'Recharger'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -305,8 +330,8 @@ function DashboardContent() {
       <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
         <Card className="border-0 shadow-xl max-w-md w-full">
           <CardHeader className="text-center">
-            <CardTitle>Configuration requise</CardTitle>
-            <CardDescription>Veuillez compléter les informations de votre pharmacie</CardDescription>
+            <CardTitle>Setup Pharmacie</CardTitle>
+            <CardDescription>Complétez informations pharmacie pour analytics CHIFA</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <Button asChild className="w-full bg-green-600 hover:bg-green-700">
@@ -317,70 +342,72 @@ function DashboardContent() {
       </div>
     );
   }
+
+  // Gestion du statut 'pending' - pharmacie créée par l'admin mais en attente d'approbation
+  if (pharmacyStatus === 'pending') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
+        <Card className="border-0 shadow-xl max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="h-8 w-8 text-orange-600" />
+            </div>
+            <CardTitle className="text-xl font-bold">Compte en attente</CardTitle>
+            <CardDescription>
+              Votre compte pharmacie a été créé et est en cours de validation par notre équipe.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="bg-blue-50 p-4 rounded-lg text-left">
+              <h4 className="font-semibold text-blue-900 mb-2">Informations de votre pharmacie :</h4>
+              <div className="text-sm text-blue-800 space-y-1">
+                <div><strong>Code PS :</strong> {codePs || 'Non défini'}</div>
+                <div><strong>Email :</strong> {user?.email}</div>
+              </div>
+            </div>
+            <div className="text-sm text-gray-600">
+              <p>Vous recevrez un email de confirmation une fois votre compte approuvé.</p>
+              <p className="mt-2">En cas de questions, contactez notre support.</p>
+            </div>
+            <Button
+              onClick={() => window.location.reload()}
+              variant="outline"
+              className="w-full border-green-600 text-green-600 hover:bg-green-50"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Vérifier le statut
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   
   const canChat = pharmacyStatus === 'active' || (pharmacyStatus === 'active_demo' && demoCreditsRemaining > 0);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header with modern design */}
-      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="icon" asChild>
-                <a href="/">
-                  <ArrowLeft className="h-4 w-4" />
-                </a>
-              </Button>
-              <div>
-                <h1 className="text-xl font-semibold flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-green-600" />
-                  Chat Chifa.ai
-                </h1>
-                {pharmacyStatus === 'active_demo' && (
-                  <Badge variant="secondary" className="text-xs mt-1">
-                    Démo - {demoCreditsRemaining} crédits restants
-                  </Badge>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <PharmacyConnectionStatus />
-              <ThemeToggle />
-              <Button variant="ghost" size="icon" asChild>
-                <a href="/settings">
-                  <Settings className="h-4 w-4" />
-                </a>
-              </Button>
-            </div>
+    <div className="h-full flex flex-col">
+      {/* Alert for pending payment approval */}
+      {pharmacyStatus === 'pending_payment_approval' && (
+        <div className="bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800 rounded-xl p-3 m-4 mb-0">
+          <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm">
+              Validation paiement en cours. Analytics limité.
+            </span>
           </div>
-          
-          {pharmacyStatus === 'pending_payment_approval' && (
-            <div className="mt-3">
-              <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm">
-                    Votre compte est en attente d'approbation de paiement. Certaines fonctionnalités peuvent être limitées.
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-      </header>
+      )}
       
       {/* Main chat area */}
-      <div className="container mx-auto px-4 py-6 h-[calc(100vh-120px)] flex flex-col">
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto">
-            <MessageList />
-          </div>
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Messages area */}
+        <div className="flex-1 overflow-hidden">
+          <MessageList />
         </div>
 
         {/* Chat input */}
-        <div className="mt-4">
+        <div className="border-t bg-background">
           <ChatInput />
         </div>
       </div>
@@ -405,14 +432,14 @@ export default function DashboardPage() {
   }, [isAuthReady, isAdmin, user, router]);
 
   if (!isAuthReady) {
-    return <div className="p-8 text-center">Chargement du profil...</div>;
+    return <div className="p-8 text-center">Chargement...</div>;
   }
   if (!user || isAdmin) {
     return null; // Redirection en cours
   }
 
   return (
-    <Suspense fallback={<div className="p-6 text-center">Chargement de la page...</div>}>
+    <Suspense fallback={<div className="p-6 text-center">Chargement...</div>}>
       <DashboardContent />
     </Suspense>
   );

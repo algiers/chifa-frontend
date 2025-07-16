@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useUIStore } from '@/stores/uiStore'; // Import UI store
-import { LayoutDashboard, History, Settings, X } from 'lucide-react'; // Importer les icônes + X pour fermer
+import { useAuthStore } from '@/stores/authStore'; // Import auth store
+import { LayoutDashboard, History, Settings, X, LogOut } from 'lucide-react'; // Importer les icônes + X pour fermer + LogOut
 import { Button } from '@/components/ui/button'; // Importer Button pour le bouton de fermeture
+import { createBrowserClient } from '@supabase/ssr'; // Import for logout functionality
 
 interface NavItem {
   href: string;
@@ -28,7 +30,10 @@ const navItems: NavItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { isMobileSidebarOpen, setMobileSidebarOpen, toggleMobileSidebar } = useUIStore();
+  const { user, clearAuth } = useAuthStore();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Fermer le sidebar mobile lors d'un changement de route
   useEffect(() => {
@@ -37,6 +42,36 @@ export default function Sidebar() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, setMobileSidebarOpen]);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        console.error('Supabase configuration missing');
+        setIsLoggingOut(false);
+        return;
+      }
+
+      const isolatedSupabaseClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
+      const { error } = await isolatedSupabaseClient.auth.signOut();
+
+      if (error) {
+        console.error('Error during logout:', error);
+      } else {
+        clearAuth();
+        router.push('/login');
+      }
+    } catch (e: any) {
+      console.error('Unexpected error during logout:', e);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const sidebarContent = (
     <>
@@ -60,7 +95,9 @@ export default function Sidebar() {
           <X className="h-6 w-6" />
         </Button>
       </div>
-      <nav>
+      
+      {/* Navigation principale */}
+      <nav className="flex-1">
         <ul>
           {navItems.map((item) => (
             <li key={item.href}>
@@ -77,6 +114,21 @@ export default function Sidebar() {
           ))}
         </ul>
       </nav>
+
+      {/* Bouton de déconnexion en bas */}
+      {user && (
+        <div className="mt-auto pt-4 border-t border-gray-700">
+          <Button
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-transparent text-gray-300 hover:text-white hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50"
+            variant="ghost"
+          >
+            <LogOut className="w-5 h-5" />
+            <span>{isLoggingOut ? 'Déconnexion...' : 'Déconnexion'}</span>
+          </Button>
+        </div>
+      )}
     </>
   );
 

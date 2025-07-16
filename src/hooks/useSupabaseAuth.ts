@@ -97,6 +97,8 @@ export function useSupabaseAuth() {
       }
 
       console.log('[useSupabaseAuth] Profile loaded successfully:', profileData);
+      console.log('[useSupabaseAuth] Profile code_ps value:', profileData.code_ps);
+      console.log('[useSupabaseAuth] Profile pharmacy_status value:', profileData.pharmacy_status);
 
       // Mapper les champs snake_case > camelCase pour le store
       const mappedDetails = {

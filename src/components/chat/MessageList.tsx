@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useChatStore } from '@/stores/chatStore';
 import MessageItem from './MessageItem';
-import { Skeleton } from '@/components/ui/skeleton'; // À ajouter via shadcn
+import { MessageSquare, Sparkles } from 'lucide-react';
 
 export default function MessageList() {
   const { messages, isLoading } = useChatStore();
@@ -15,26 +15,70 @@ export default function MessageList() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isLoading]); // Défiler quand de nouveaux messages arrivent ou quand le chargement change
+  }, [messages, isLoading]);
 
-  return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-t-lg">
-      {messages.map((msg) => (
-        <MessageItem key={msg.id} message={msg} />
-      ))}
-      {isLoading && messages.length > 0 && messages[messages.length -1].role === 'user' && (
-        // Afficher un skeleton seulement si le dernier message est de l'utilisateur et qu'on attend une réponse
-        <div className="flex my-3 justify-start">
-          <div className="flex items-start space-x-3 max-w-[85%] sm:max-w-[75%]">
-            <Skeleton className="w-8 h-8 rounded-full bg-gray-300" />
-            <div className="p-3 rounded-lg shadow-sm bg-gray-100 w-48">
-              <Skeleton className="h-4 w-3/4 bg-gray-300 mb-2" />
-              <Skeleton className="h-4 w-1/2 bg-gray-300" />
+  // Empty state when no messages
+  if (messages.length === 0 && !isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <MessageSquare className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="text-2xl font-semibold text-foreground mb-3">
+            Analytics CHIFA
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            Analysez CA, rotation, assurés par régime. 
+            Requêtes naturelles sur base CHIFA_OFFICINE.
+          </p>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 justify-center">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span>CA CNAS avril dernier</span>
+            </div>
+            <div className="flex items-center gap-2 justify-center">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span>Top produits rotation T1</span>
+            </div>
+            <div className="flex items-center gap-2 justify-center">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span>Historique DCI CASNOS juin</span>
             </div>
           </div>
         </div>
-      )}
-      <div ref={messagesEndRef} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto chat-scroll">
+      <div className="container mx-auto max-w-4xl px-4 py-6">
+        <div className="space-y-6">
+          {messages.map((msg) => (
+            <div key={msg.id} className="message-enter">
+              <MessageItem message={msg} />
+            </div>
+          ))}
+          {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
+            <div className="flex justify-start message-enter">
+              <div className="flex items-start space-x-3 max-w-[85%]">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <MessageSquare className="h-4 w-4 text-primary" />
+                </div>
+                <div className="bg-muted rounded-2xl px-4 py-3 max-w-none">
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
     </div>
   );
 }

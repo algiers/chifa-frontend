@@ -163,7 +163,7 @@ function RegisterPageContent() {
                 <Input
                   id="fullName"
                   type="text"
-                  placeholder="Dr. Mohamed Benali"
+                  placeholder="Dr. [Nom] [Prénom]"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={isLoading}
@@ -178,7 +178,7 @@ function RegisterPageContent() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="votre@pharmacie.com"
+                  placeholder="[email]@pharmacie.dz"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}

@@ -36,18 +36,18 @@ export default function ChatInput() {
 
   const placeholderText = () => {
     if (!codePs && (pharmacyStatus === 'pending_pharmacy_details' || pharmacyStatus === 'not_registered')) {
-      return "Veuillez d'abord compléter les informations de votre pharmacie...";
+      return "Complétez profil pharmacie";
     }
     if (pharmacyStatus === 'pending_payment_approval') {
-      return "Votre compte est en attente d'approbation de paiement...";
+      return "Attente validation paiement";
     }
     if (pharmacyStatus === 'demo_credits_exhausted') {
-      return "Vos crédits démo sont épuisés. Veuillez choisir un plan.";
+      return "Crédits épuisés - Choisir plan";
     }
     if (!canSendMessage) {
-      return "Vous ne pouvez pas envoyer de message actuellement.";
+      return "Analytics indisponible";
     }
-    return 'Posez votre question en langage naturel... (ex: stock de Paracétamol)';
+    return 'CA CHIFA T1 2025';
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -202,37 +202,62 @@ export default function ChatInput() {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="sticky bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200 shadow-sm"
-    >
-      <div className="flex items-center space-x-3">
-        <Input
-          type="text"
-          placeholder={placeholderText()}
-          value={currentQuery}
-          onChange={(e) => setCurrentQuery(e.target.value)}
-          disabled={!canSendMessage || isComponentLoading}
-          className="flex-1 h-12 px-4 rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-        />
-        <Button 
-          type="submit" 
-          disabled={!canSendMessage || !currentQuery.trim() || isComponentLoading}
-          className="h-12 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-        >
-          {isComponentLoading ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-          ) : (
-            <SendHorizonal className="w-5 h-5" />
-          )}
-          <span className="sr-only">Envoyer</span>
-        </Button>
-      </div>
-      {!canSendMessage && (
-         <p className="text-xs text-red-500 mt-1 text-center">
-           {placeholderText()}
-         </p>
-      )}
-    </form>
+    <div className="p-4">
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="relative flex items-end bg-background border border-input rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:border-transparent">
+          <textarea
+            placeholder={placeholderText()}
+            value={currentQuery}
+            onChange={(e) => {
+              setCurrentQuery(e.target.value);
+              // Auto-resize
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = 'auto';
+              target.style.height = Math.min(target.scrollHeight, 128) + 'px';
+            }}
+            disabled={!canSendMessage || isComponentLoading}
+            rows={1}
+            className="flex-1 resize-none bg-transparent px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 max-h-32 min-h-[44px] transition-all duration-200"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (currentQuery.trim() && canSendMessage && !isComponentLoading) {
+                  handleSubmit(e as any);
+                }
+              }
+            }}
+            style={{
+              height: 'auto',
+              minHeight: '44px',
+            }}
+          />
+          <div className="flex items-center p-2">
+            <Button 
+              type="submit" 
+              size="sm"
+              disabled={!canSendMessage || !currentQuery.trim() || isComponentLoading}
+              className="h-8 w-8 p-0 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-50"
+            >
+              {isComponentLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent"></div>
+              ) : (
+                <SendHorizonal className="w-4 h-4" />
+              )}
+              <span className="sr-only">Envoyer</span>
+            </Button>
+          </div>
+        </div>
+        
+        {!canSendMessage && (
+          <p className="text-xs text-destructive mt-2 text-center">
+            {placeholderText()}
+          </p>
+        )}
+        
+        <div className="flex items-center justify-center mt-2 text-xs text-muted-foreground">
+          <span>Entrée = Envoyer • Maj+Entrée = Nouvelle ligne</span>
+        </div>
+      </form>
+    </div>
   );
 }

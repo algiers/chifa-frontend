@@ -65,3 +65,44 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Chat message animations */
+  .message-enter {
+    animation: messageSlideIn 0.3s ease-out;
+  }
+  
+  @keyframes messageSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Smooth scrollbar for chat */
+  .chat-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .chat-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .chat-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+  
+  .chat-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+  
+  /* Auto-resize textarea */
+  .auto-resize-textarea {
+    field-sizing: content;
+  }
+}

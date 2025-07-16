@@ -6,6 +6,7 @@ import type { User } from '@supabase/supabase-js';
 export type PharmacyStatus =
   | 'not_registered'
   | 'pending_pharmacy_details'
+  | 'pending'
   | 'active_demo'
   | 'demo_credits_exhausted'
   | 'pending_payment_approval'

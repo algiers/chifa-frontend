@@ -46,7 +46,8 @@ export default function CompletePharmacyProfilePage() {
     if (
       pharmacyStatus === 'active' ||
       pharmacyStatus === 'active_demo' ||
-      pharmacyStatus === 'pending_payment_approval'
+      pharmacyStatus === 'pending_payment_approval' ||
+      pharmacyStatus === 'pending'
     ) {
       router.replace('/dashboard');
     }
