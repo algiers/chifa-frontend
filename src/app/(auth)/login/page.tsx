@@ -1,196 +1,123 @@
 'use client';
 
-import React, { useState, FormEvent, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { AlertCircle, ArrowLeft, Loader2 } from 'lucide-react';
 
-function LoginPageContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const supabase = createSupabaseBrowserClient();
-  const { setUser, setLoading, setError: setAuthError } = useAuthStore();
-
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoadingState] = useState(false);
-  const [error, setErrorState] = useState<string | null>(null);
-
-  const handleLogin = async (e: FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+  const { login, isLoading } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/chat-v2';
+  
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[LoginPage] handleLogin started');
-    setIsLoadingState(true);
-    setLoading(true);
-    setErrorState(null);
-    setAuthError(null);
-
-    console.log(`[LoginPage] Attempting signInWithPassword for email: ${email}`);
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    console.log('[LoginPage] signInWithPassword response:', { data, signInError });
-
-    if (signInError) {
-      console.error('[LoginPage] signInError:', signInError);
-      setErrorState('Email ou mot de passe incorrect');
-      setAuthError(new Error(signInError.message));
-      setIsLoadingState(false);
-      setLoading(false);
+    setError(null);
+    
+    if (!email || !password) {
+      setError('Veuillez remplir tous les champs');
       return;
     }
-
-    if (data.user && data.session) {
-      console.log('[LoginPage] Login successful. User ID:', data.user.id);
-      setUser(data.user);
-      
-      const redirectTo = searchParams.get('redirectTo') || '/dashboard';
-      console.log(`[LoginPage] Redirecting to: ${redirectTo}`);
-      router.push(redirectTo);
-    } else {
-      console.warn('[LoginPage] Login issue: No user/session data returned');
-      setErrorState('Erreur inattendue lors de la connexion');
-      setAuthError(new Error('Erreur inattendue lors de la connexion'));
-    }
     
-    console.log('[LoginPage] handleLogin finished');
-    setIsLoadingState(false);
-    setLoading(false);
+    try {
+      await login(email, password);
+      router.push(callbackUrl);
+    } catch (err: any) {
+      setError(err.message || 'Une erreur est survenue lors de la connexion');
+    }
   };
-
+  
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-background">
       <div className="w-full max-w-md space-y-8">
-        {/* Header with back button and theme toggle */}
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <ThemeToggle />
-        </div>
-
-        {/* Logo and brand */}
         <div className="text-center">
-          <Link href="/" className="inline-flex items-center space-x-2">
-            <div className="h-12 w-12 rounded-lg bg-green-600 flex items-center justify-center">
-              <span className="text-white font-bold text-xl">C</span>
+          <h1 className="text-4xl font-bold tracking-tight text-green-600">Chifa.ai</h1>
+          <h2 className="mt-6 text-2xl font-bold tracking-tight">Connexion</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Ou{' '}
+            <Link href="/register" className="font-medium text-green-600 hover:text-green-500">
+              créer un compte
+            </Link>
+          </p>
+        </div>
+        
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <div className="bg-destructive/15 p-3 rounded-md">
+              <p className="text-sm text-destructive">{error}</p>
             </div>
-            <span className="font-bold text-2xl">Chifa.ai</span>
-          </Link>
-        </div>
-
-        {/* Login Card */}
-        <Card className="border-0 shadow-xl">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold">Se connecter</CardTitle>
-            <CardDescription>
-              Entrez vos identifiants pour accéder à votre pharmacie
-            </CardDescription>
-          </CardHeader>
-
-          <form onSubmit={handleLogin}>
-            <CardContent className="space-y-4">
-              {/* Error message */}
-              {error && (
-                <div className="flex items-center space-x-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {/* Email field */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="[email]@pharmacie.dz"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoading}
-                  required
-                  autoComplete="email"
-                />
-              </div>
-
-              {/* Password field */}
-              <div className="space-y-2">
-                <Label htmlFor="password">Mot de passe</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
-
-              {/* Forgot password link */}
-              <div className="text-right">
-                <Link 
-                  href="/forgot-password" 
-                  className="text-sm text-muted-foreground hover:text-green-600 transition-colors"
-                >
-                  Mot de passe oublié ?
-                </Link>
-              </div>
-            </CardContent>
-
-            <CardFooter className="flex flex-col space-y-4">
-              {/* Submit button */}
-              <Button 
-                type="submit" 
-                className="w-full bg-green-600 hover:bg-green-700" 
-                disabled={isLoading || !email || !password}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Connexion...
-                  </>
-                ) : (
-                  'Se connecter'
-                )}
-              </Button>
-
-              {/* Register link */}
-              <div className="text-center text-sm text-muted-foreground">
-                Pas encore de compte ?{' '}
-                <Link 
-                  href="/register" 
-                  className="text-green-600 hover:underline font-medium"
-                >
-                  S'inscrire
-                </Link>
-              </div>
-            </CardFooter>
-          </form>
-        </Card>
-
-        {/* Footer */}
-        <div className="text-center text-xs text-muted-foreground">
-          En vous connectant, vous acceptez nos{' '}
-          <Link href="/terms" className="underline hover:text-green-600">
-            conditions d'utilisation
-          </Link>{' '}
-          et notre{' '}
-          <Link href="/privacy" className="underline hover:text-green-600">
-            politique de confidentialité
-          </Link>
-        </div>
+          )}
+          
+          <div className="space-y-4 rounded-md">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium">
+                Email
+              </label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium">
+                Mot de passe
+              </label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-muted-foreground">
+                Se souvenir de moi
+              </label>
+            </div>
+            
+            <div className="text-sm">
+              <Link href="/forgot-password" className="font-medium text-green-600 hover:text-green-500">
+                Mot de passe oublié?
+              </Link>
+            </div>
+          </div>
+          
+          <div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Connexion...' : 'Se connecter'}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -198,15 +125,8 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Chargement...</p>
-        </div>
-      </div>
-    }>
-      <LoginPageContent />
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginForm />
     </Suspense>
   );
 }

@@ -72,19 +72,21 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-sm p-4">
+    <nav className="bg-chatgpt-darker border-b border-gray-700 p-4">
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center">
+          {/* Bouton toggle mobile sidebar */}
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden mr-2" // Visible on mobile, hidden on md and up
+            className="md:hidden mr-2 text-chatgpt-secondary hover:text-chatgpt-primary hover:bg-gray-700" // Visible on mobile, hidden on md and up
             onClick={toggleMobileSidebar}
             aria-label="Ouvrir le menu"
           >
             <Menu className="h-6 w-6" />
           </Button>
-          {/* Titre retiré pour éviter la duplication avec le sidebar */}
+          
+
         </div>
         <div>
           {user ? (
@@ -95,6 +97,10 @@ export default function Navbar() {
                   <Link href="/admin/dashboard">Admin</Link>
                 </Button>
               )}
+              {/* Bouton temporaire pour tester ChatUIv2 */}
+              <Button asChild variant="outline" size="sm" className="border-green-600 text-green-600 hover:bg-green-50">
+                <Link href="/chat-v2">Test V2</Link>
+              </Button>
               {/* Bouton de déconnexion déplacé dans le Sidebar */}
             </div>
           ) : (

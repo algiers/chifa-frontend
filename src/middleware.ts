@@ -1,95 +1,132 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name) => request.cookies.get(name)?.value,
-        set: (name, value, options) => {
-          request.cookies.set({ name, value, ...options });
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove: (name, options) => {
-          request.cookies.set({ name, value: '', ...options });
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          });
-          response.cookies.set({ name, value: '', ...options });
-        },
-      },
-    }
+  const path = request.nextUrl.pathname;
+  
+  // Public paths that don't require authentication
+  const publicPaths = [
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/api/auth',
+    '/api/health',
+    '/',
+  ];
+  
+  const isPublicPath = publicPaths.some(publicPath => 
+    path === publicPath || path.startsWith(publicPath + '/')
   );
 
-  let session = null;
-  try {
-    const {
-      data: { session: sessionData },
-      error: sessionError
-    } = await supabase.auth.getSession();
-    
-    session = sessionData;
-    
-    if (sessionError) {
-      console.log('[Middleware] Session error:', sessionError);
-    }
-  } catch (error) {
-    console.log('[Middleware] Session fetch failed:', error);
+  // Static assets and system paths
+  const isStaticAsset = [
+    '/_next',
+    '/favicon.ico',
+    '/images',
+    '/fonts',
+    '/icons',
+    '/manifest.json',
+    '/robots.txt',
+    '/sitemap.xml',
+  ].some(staticPath => path.startsWith(staticPath));
+
+  // Skip middleware for static assets
+  if (isStaticAsset) {
+    return NextResponse.next();
   }
 
-  const { pathname } = request.nextUrl;
-
-  // Logs de debug seulement en développement et pour les erreurs importantes
-  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_MIDDLEWARE === 'true') {
-    console.log('[Middleware] Path:', pathname, 'Session:', !!session);
-  }
-
-  // Routes protégées qui nécessitent une authentification
-  const protectedRoutes = ['/dashboard', '/history', '/settings', '/complete-pharmacy-profile'];
-  // Routes d'authentification (où l'utilisateur ne devrait pas aller s'il est déjà loggué)
-  const authRoutes = ['/login', '/register', '/forgot-password'];
-
-  if (!session && protectedRoutes.some(route => pathname.startsWith(route))) {
-    // Rediriger vers login si non authentifié et tente d'accéder à une route protégée
-    const redirectUrl = new URL('/login', request.url);
-    redirectUrl.searchParams.set('redirectTo', pathname); // Garder la page de destination
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  if (session && authRoutes.some(route => pathname.startsWith(route))) {
-    // Rediriger vers dashboard si authentifié et tente d'accéder à une page d'auth
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
+  // API routes that require authentication
+  const protectedApiRoutes = [
+    '/api/chat',
+    '/api/conversations',
+    '/api/user',
+  ];
   
-  // Gérer le rafraîchissement de la session pour les Server Components
-  // Cela est important pour que les Server Components aient toujours la session la plus à jour.
-  // await supabase.auth.getUser(); // Décommenter si vous utilisez getUser dans les SC et que la session n'est pas à jour.
+  const isProtectedApiRoute = protectedApiRoutes.some(apiPath => 
+    path.startsWith(apiPath)
+  );
 
-  return response;
+  // Skip middleware for non-protected API routes
+  if (path.startsWith('/api') && !isProtectedApiRoute) {
+    return NextResponse.next();
+  }
+
+  try {
+    // Create Supabase client and get session
+    const supabase = createSupabaseServerClient();
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Middleware auth error:', error);
+    }
+    
+    const isAuthenticated = !!session?.user;
+
+    // Handle protected API routes
+    if (isProtectedApiRoute) {
+      if (!isAuthenticated) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+      // Add user info to headers for API routes
+      const response = NextResponse.next();
+      response.headers.set('x-user-id', session.user.id);
+      response.headers.set('x-user-email', session.user.email || '');
+      return response;
+    }
+
+    // Redirect authenticated users away from auth pages
+    if (isAuthenticated && isPublicPath && path !== '/') {
+      const redirectTo = request.nextUrl.searchParams.get('callbackUrl') || '/chat-v2';
+      return NextResponse.redirect(new URL(redirectTo, request.url));
+    }
+
+    // Redirect unauthenticated users to login (except for public paths)
+    if (!isAuthenticated && !isPublicPath) {
+      const redirectUrl = new URL('/login', request.url);
+      
+      // Preserve the original URL for redirect after login
+      if (path !== '/login') {
+        redirectUrl.searchParams.set('callbackUrl', request.url);
+      }
+      
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    // Handle root path redirect for authenticated users
+    if (isAuthenticated && path === '/') {
+      return NextResponse.redirect(new URL('/chat-v2', request.url));
+    }
+
+    return NextResponse.next();
+    
+  } catch (error) {
+    console.error('Middleware error:', error);
+    
+    // On error, redirect to login for protected routes
+    if (!isPublicPath) {
+      const redirectUrl = new URL('/login', request.url);
+      redirectUrl.searchParams.set('error', 'auth_error');
+      return NextResponse.redirect(redirectUrl);
+    }
+    
+    return NextResponse.next();
+  }
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
+     * Match all request paths except:
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - assets (dossier public/assets)
-     * - images (dossier public/images)
+     * - Other static assets
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|assets|images).*)',
+    '/((?!_next/static|_next/image|favicon.ico|images|fonts|icons|manifest.json|robots.txt|sitemap.xml).*)',
   ],
 };

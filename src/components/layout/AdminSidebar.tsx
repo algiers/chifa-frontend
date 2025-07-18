@@ -59,26 +59,51 @@ export default function AdminSidebar() {
     setIsLoggingOut(true);
 
     try {
+      console.log('[AdminSidebar] Starting logout process...');
+      
+      // Méthode 1: Essayer la déconnexion Supabase normale
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-      if (!supabaseUrl || !supabaseAnonKey) {
-        console.error('Supabase configuration missing');
-        setIsLoggingOut(false);
-        return;
+      if (supabaseUrl && supabaseAnonKey) {
+        try {
+          const isolatedSupabaseClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
+          const { error } = await isolatedSupabaseClient.auth.signOut();
+          
+          if (error) {
+            console.warn('[AdminSidebar] Supabase signOut error (continuing anyway):', error);
+          } else {
+            console.log('[AdminSidebar] Supabase signOut successful');
+          }
+        } catch (supabaseError) {
+          console.warn('[AdminSidebar] Supabase signOut failed (continuing anyway):', supabaseError);
+        }
       }
 
-      const isolatedSupabaseClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
-      const { error } = await isolatedSupabaseClient.auth.signOut();
-
-      if (error) {
-        console.error('Error during logout:', error);
-      } else {
-        clearAuth();
-        router.push('/login');
+      // Méthode 2: Forcer la déconnexion côté client (toujours exécutée)
+      console.log('[AdminSidebar] Clearing local auth state...');
+      clearAuth();
+      
+      // Méthode 3: Nettoyer le localStorage
+      try {
+        localStorage.removeItem('auth-storage');
+        localStorage.removeItem('sb-ddeibfjxpwnisguehnmo-auth-token');
+        console.log('[AdminSidebar] Local storage cleared');
+      } catch (storageError) {
+        console.warn('[AdminSidebar] Could not clear localStorage:', storageError);
       }
+
+      // Méthode 4: Redirection forcée
+      console.log('[AdminSidebar] Redirecting to login...');
+      window.location.href = '/login'; // Utiliser window.location pour forcer la redirection
+      
     } catch (e: any) {
-      console.error('Unexpected error during logout:', e);
+      console.error('[AdminSidebar] Unexpected error during logout:', e);
+      
+      // En cas d'erreur, forcer quand même la déconnexion
+      clearAuth();
+      localStorage.removeItem('auth-storage');
+      window.location.href = '/login';
     } finally {
       setIsLoggingOut(false);
     }
@@ -146,7 +171,7 @@ export default function AdminSidebar() {
   return (
     <>
       {/* Sidebar pour écrans larges */}
-      <aside className="w-64 bg-gray-800 text-white p-4 space-y-2 hidden md:flex md:flex-col h-full">
+      <aside className="w-64 bg-gray-800 text-white p-4 space-y-2 hidden md:flex md:flex-col min-h-screen sticky top-0">
         {sidebarContent}
       </aside>
 

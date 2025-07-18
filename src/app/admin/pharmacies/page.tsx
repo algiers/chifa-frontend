@@ -135,6 +135,7 @@ export default function AdminPharmaciesPage() {
   };
 
   useEffect(() => {
+    console.log('[AdminPharmacies] useEffect triggered, calling fetchPharmacies');
     fetchPharmacies();
   }, []);
 
@@ -244,8 +245,17 @@ export default function AdminPharmaciesPage() {
     }
   };
 
+  const [editInProgress, setEditInProgress] = useState(false);
+
   const handleEditPharmacy = async (pharmacy: Pharmacy) => {
+    if (editInProgress) {
+      console.log('[AdminPharmacies] Edit already in progress, ignoring...');
+      return;
+    }
+
     console.log('[AdminPharmacies] handleEditPharmacy called with pharmacy:', pharmacy);
+    setEditInProgress(true);
+
     // Récupérer la pharmacie avec sa clé virtuelle via l'API
     try {
       const supabase = createSupabaseBrowserClient();
@@ -286,7 +296,7 @@ export default function AdminPharmaciesPage() {
         email: pharmacyData.email || '',
         virtual_key: pharmacyData.virtual_key || '',
       };
-      
+
       console.log('[AdminPharmacies] Setting edit data:', editDataToSet);
       setEditData(editDataToSet);
       console.log('[AdminPharmacies] Setting showEditForm to true');
@@ -294,6 +304,8 @@ export default function AdminPharmaciesPage() {
     } catch (err) {
       console.error('[AdminPharmacies] Error in handleEditPharmacy:', err);
       toast.error('Erreur lors de la récupération des données');
+    } finally {
+      setEditInProgress(false);
     }
   };
 
@@ -344,11 +356,25 @@ export default function AdminPharmaciesPage() {
     if (!editData || resetLoading) return;
     setResetLoading(true);
     try {
+      // Récupérer une session fraîche
       const supabase = createSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Non authentifié');
+      console.log(`[ADMIN] Getting fresh session for password reset...`);
 
-      console.log(`[ADMIN] Resetting password for pharmacy ID: ${editData.id}`);
+      // Forcer le refresh de la session si nécessaire
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error('[ADMIN] Session error:', sessionError);
+        throw new Error('Erreur de session');
+      }
+
+      if (!session) {
+        console.error('[ADMIN] No session found');
+        throw new Error('Non authentifié - veuillez vous reconnecter');
+      }
+
+      console.log(`[ADMIN] Session valid, resetting password for pharmacy ID: ${editData.id}`);
+      console.log(`[ADMIN] Token length: ${session.access_token.length}`);
 
       const response = await fetch('/api/admin/pharmacies', {
         method: 'PATCH',

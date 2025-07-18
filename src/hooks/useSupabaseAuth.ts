@@ -65,7 +65,7 @@ export function useSupabaseAuth() {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, email, phone_number, avatar_url, code_ps, pharmacy_name, pharmacy_address, pharmacy_status, current_plan_id, demo_credits_remaining, is_admin, created_at, updated_at')
         .eq('id', user.id)
         .single();
 
@@ -99,6 +99,7 @@ export function useSupabaseAuth() {
       console.log('[useSupabaseAuth] Profile loaded successfully:', profileData);
       console.log('[useSupabaseAuth] Profile code_ps value:', profileData.code_ps);
       console.log('[useSupabaseAuth] Profile pharmacy_status value:', profileData.pharmacy_status);
+      console.log('[useSupabaseAuth] Profile is_admin value:', profileData.is_admin);
 
       // Mapper les champs snake_case > camelCase pour le store
       const mappedDetails = {

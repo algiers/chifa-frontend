@@ -47,7 +47,7 @@ export default function ChatInput() {
     if (!canSendMessage) {
       return "Analytics indisponible";
     }
-    return 'CA CHIFA T1 2025';
+    return 'Posez votre question en langage naturel... (ex: Rotation de Paracétamol)';
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -202,62 +202,70 @@ export default function ChatInput() {
   };
 
   return (
-    <div className="p-4">
-      <form onSubmit={handleSubmit} className="relative">
-        <div className="relative flex items-end bg-background border border-input rounded-2xl shadow-sm focus-within:ring-2 focus-within:ring-ring focus-within:border-transparent">
-          <textarea
-            placeholder={placeholderText()}
-            value={currentQuery}
-            onChange={(e) => {
-              setCurrentQuery(e.target.value);
-              // Auto-resize
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = 'auto';
-              target.style.height = Math.min(target.scrollHeight, 128) + 'px';
-            }}
-            disabled={!canSendMessage || isComponentLoading}
-            rows={1}
-            className="flex-1 resize-none bg-transparent px-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 max-h-32 min-h-[44px] transition-all duration-200"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (currentQuery.trim() && canSendMessage && !isComponentLoading) {
-                  handleSubmit(e as any);
+    <div className="bg-white border-t border-gray-200">
+      <div className="max-w-4xl mx-auto px-6 py-6">
+        <form onSubmit={handleSubmit} className="relative">
+          <div className="relative flex items-end bg-white border border-gray-300 rounded-2xl shadow-sm chat-input-focus focus-within:ring-2 focus-within:ring-chatgpt-accent focus-within:border-chatgpt-accent transition-all duration-200">
+            <textarea
+              placeholder={placeholderText()}
+              value={currentQuery}
+              onChange={(e) => {
+                setCurrentQuery(e.target.value);
+                // Auto-resize
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = Math.min(target.scrollHeight, 200) + 'px';
+              }}
+              disabled={!canSendMessage || isComponentLoading}
+              rows={1}
+              className="flex-1 resize-none bg-transparent px-5 py-4 text-base text-gray-900 placeholder:text-gray-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 max-h-48 min-h-[56px] transition-all duration-200"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (currentQuery.trim() && canSendMessage && !isComponentLoading) {
+                    handleSubmit(e as any);
+                  }
                 }
-              }
-            }}
-            style={{
-              height: 'auto',
-              minHeight: '44px',
-            }}
-          />
-          <div className="flex items-center p-2">
-            <Button 
-              type="submit" 
-              size="sm"
-              disabled={!canSendMessage || !currentQuery.trim() || isComponentLoading}
-              className="h-8 w-8 p-0 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-50"
-            >
-              {isComponentLoading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent"></div>
-              ) : (
-                <SendHorizonal className="w-4 h-4" />
-              )}
-              <span className="sr-only">Envoyer</span>
-            </Button>
+              }}
+              style={{
+                height: 'auto',
+                minHeight: '56px',
+              }}
+            />
+            <div className="flex items-center p-2">
+              <Button 
+                type="submit" 
+                size="sm"
+                disabled={!canSendMessage || !currentQuery.trim() || isComponentLoading}
+                className="h-10 w-10 p-0 rounded-xl bg-chatgpt-accent hover:bg-chatgpt-accent-hover disabled:opacity-30 disabled:hover:bg-chatgpt-accent text-white transition-all duration-200 shadow-sm chatgpt-hover"
+              >
+                {isComponentLoading ? (
+                  <div className="loading-dots text-white">
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                  </div>
+                ) : (
+                  <SendHorizonal className="w-5 h-5" />
+                )}
+                <span className="sr-only">Envoyer</span>
+              </Button>
+            </div>
           </div>
-        </div>
-        
-        {!canSendMessage && (
-          <p className="text-xs text-destructive mt-2 text-center">
-            {placeholderText()}
-          </p>
-        )}
-        
-        <div className="flex items-center justify-center mt-2 text-xs text-muted-foreground">
-          <span>Entrée = Envoyer • Maj+Entrée = Nouvelle ligne</span>
-        </div>
-      </form>
+          
+          {!canSendMessage && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-sm text-red-700 text-center font-medium">
+                {placeholderText()}
+              </p>
+            </div>
+          )}
+          
+          <div className="flex items-center justify-center mt-3 text-xs text-gray-500">
+            <span>Appuyez sur <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">Entrée</kbd> pour envoyer • <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">Maj+Entrée</kbd> pour une nouvelle ligne</span>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
