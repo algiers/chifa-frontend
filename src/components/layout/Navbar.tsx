@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { createBrowserClient } from '@supabase/ssr'; // Import for isolated client
 import { Menu } from 'lucide-react'; // Import Menu icon
+import PharmacyConnectionStatus from '@/components/PharmacyConnectionStatus';
 
 export default function Navbar() {
   const { user, clearAuth, isAdmin } = useAuthStore();
@@ -46,7 +47,7 @@ export default function Navbar() {
       );
       console.log('[Navbar] Isolated Supabase client created:', isolatedSupabaseClient);
       console.log('[Navbar] About to call signOut() on isolated client with async/await...');
-      
+
       const { error } = await isolatedSupabaseClient.auth.signOut();
 
       console.log('[Navbar] isolatedSupabaseClient.auth.signOut() call finished.');
@@ -71,33 +72,36 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-sm p-4">
+    <nav className="bg-chatgpt-darker border-b border-gray-700 p-4">
       <div className="container mx-auto flex justify-between items-center">
         <div className="flex items-center">
+          {/* Bouton toggle mobile sidebar */}
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden mr-2" // Visible on mobile, hidden on md and up
+            className="md:hidden mr-2 text-chatgpt-secondary hover:text-chatgpt-primary hover:bg-gray-700" // Visible on mobile, hidden on md and up
             onClick={toggleMobileSidebar}
             aria-label="Ouvrir le menu"
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <Link href={user ? "/dashboard" : "/"} className="text-2xl font-bold text-blue-600">
-            Chifa.ai
-          </Link>
+          
+
         </div>
         <div>
           {user ? (
             <div className="flex items-center space-x-2">
+              {!isAdmin && <PharmacyConnectionStatus />}
               {isAdmin && (
                 <Button asChild variant="outline" size="sm">
                   <Link href="/admin/dashboard">Admin</Link>
                 </Button>
               )}
-              <Button onClick={handleLogout} variant="outline" disabled={isLoggingOut}>
-                {isLoggingOut ? 'Déconnexion...' : 'Déconnexion'}
+              {/* Bouton temporaire pour tester ChatUIv2 */}
+              <Button asChild variant="outline" size="sm" className="border-green-600 text-green-600 hover:bg-green-50">
+                <Link href="/chat-v2">Test V2</Link>
               </Button>
+              {/* Bouton de déconnexion déplacé dans le Sidebar */}
             </div>
           ) : (
             <div className="space-x-2">

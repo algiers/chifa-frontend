@@ -12,7 +12,7 @@ export function Hero() {
         {/* Badge */}
         <div className="flex items-center space-x-2 rounded-full border px-3 py-1 text-sm bg-green-50 border-green-200 text-green-700">
           <Sparkles className="h-4 w-4" />
-          <span>Nouveau: IA pharmacie disponible maintenant</span>
+          <span>Nouveau: Analytics CHIFA disponible</span>
         </div>
 
         {/* Main Title */}
@@ -33,13 +33,13 @@ export function Hero() {
         <div className="flex flex-col sm:flex-row gap-4">
           <Button asChild size="lg" className="text-lg px-8 bg-green-600 hover:bg-green-700">
             <Link href="/register">
-              Commencer gratuitement
+              Démarrer Analytics
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="text-lg px-8 border-green-600 text-green-600 hover:bg-green-50">
             <Link href="/pricing">
-              Voir la démo
+              Tester Démo
             </Link>
           </Button>
         </div>
@@ -49,11 +49,11 @@ export function Hero() {
           <div className="flex space-x-2">
             <Input
               type="email"
-              placeholder="votre@pharmacie.com"
+              placeholder="pharmacie@exemple.dz"
               className="flex-1"
             />
             <Button type="submit" className="bg-green-600 hover:bg-green-700">
-              Démarrer
+              Analyser
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">

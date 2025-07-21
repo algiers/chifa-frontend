@@ -48,6 +48,45 @@ module.exports = {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
+        sidebar: {
+          DEFAULT: 'hsl(var(--sidebar-background))',
+          foreground: 'hsl(var(--sidebar-foreground))',
+          primary: 'hsl(var(--sidebar-primary))',
+          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+          accent: 'hsl(var(--sidebar-accent))',
+          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+          border: 'hsl(var(--sidebar-border))',
+          ring: 'hsl(var(--sidebar-ring))',
+        },
+        // Chifa.ai brand colors
+        'chifa': {
+          50: 'hsl(var(--chifa-green-50))',
+          100: 'hsl(var(--chifa-green-100))',
+          200: 'hsl(var(--chifa-green-200))',
+          300: 'hsl(var(--chifa-green-300))',
+          400: 'hsl(var(--chifa-green-400))',
+          500: 'hsl(var(--chifa-green-500))',
+          600: 'hsl(var(--chifa-green-600))',
+          700: 'hsl(var(--chifa-green-700))',
+          800: 'hsl(var(--chifa-green-800))',
+          900: 'hsl(var(--chifa-green-900))',
+        },
+        // ChatGPT-like dark theme colors (kept for compatibility)
+        'chatgpt': {
+          'darker': '#0d1117',      // Fond principal très sombre
+          'dark': '#161b22',        // Sidebar et zones secondaires
+          'medium': '#21262d',      // Éléments interactifs
+          'light': '#30363d',       // Hover states
+          'primary': '#f0f6fc',     // Texte principal blanc
+          'secondary': '#8b949e',   // Texte secondaire gris
+          'muted': '#6e7681',       // Texte très discret
+          'accent': '#238636',      // Vert pour les accents
+          'accent-hover': '#2ea043', // Vert hover
+        },
+        'gray': {
+          750: '#374151',
+          850: '#1f2937',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

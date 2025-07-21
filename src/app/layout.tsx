@@ -1,67 +1,37 @@
-'use client';
-
 import "./globals.css";
-import React, { useEffect, useState } from "react";
-import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
-import { SupabaseProvider } from '@/contexts/SupabaseContext';
+import React from "react";
+import { Providers } from './providers';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
-import { FullScreenLoading } from '@/components/ui/loading';
-import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { supabase, handleAuthStateChange } = useSupabaseAuth();
-  const [isInitialAuthCheckDone, setIsInitialAuthCheckDone] = useState(false);
-
-  useEffect(() => {
-    // Gestionnaire d'événements d'authentification avec le nouveau hook
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
-      console.log('[Layout] Auth event received:', event, 'Session exists:', !!session);
-      
-      await handleAuthStateChange(event, session);
-      
-      // Marquer comme prêt après le premier événement
-      console.log('[Layout] Setting auth check done for event:', event);
-      setIsInitialAuthCheckDone(true);
-    });
-
-    // Timeout de sécurité - si aucun événement d'auth n'est reçu dans 3 secondes
-    const timeoutId = setTimeout(() => {
-      console.log('[Layout] Auth timeout reached, forcing auth check done');
-      setIsInitialAuthCheckDone(true);
-    }, 3000);
-
-    return () => {
-      authListener?.subscription?.unsubscribe();
-      clearTimeout(timeoutId);
-    };
-  }, [handleAuthStateChange, supabase]);
-
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
-        <title>Chifa.ai</title>
-        <meta name="description" content="Interrogez votre base de données pharmacie en langage naturel." />
+        <title>Chifa.ai - Assistant IA pour Pharmacies</title>
+        <meta name="description" content="Interrogez votre base de données pharmacie en langage naturel avec Chifa.ai, votre assistant intelligent." />
+        <meta name="keywords" content="pharmacie, IA, assistant, base de données, langage naturel, Chifa.ai" />
+        <meta name="author" content="Chifa.ai" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#238636" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
       </head>
       <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
-          <SupabaseProvider supabase={supabase}>
-            {!isInitialAuthCheckDone ? (
-              <FullScreenLoading message="Initialisation de l'authentification..." />
-            ) : (
-              children
-            )}
+          <Providers>
+            {children}
             <Toaster />
-          </SupabaseProvider>
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

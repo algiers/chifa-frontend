@@ -36,18 +36,18 @@ export default function ChatInput() {
 
   const placeholderText = () => {
     if (!codePs && (pharmacyStatus === 'pending_pharmacy_details' || pharmacyStatus === 'not_registered')) {
-      return "Veuillez d'abord compléter les informations de votre pharmacie...";
+      return "Complétez profil pharmacie";
     }
     if (pharmacyStatus === 'pending_payment_approval') {
-      return "Votre compte est en attente d'approbation de paiement...";
+      return "Attente validation paiement";
     }
     if (pharmacyStatus === 'demo_credits_exhausted') {
-      return "Vos crédits démo sont épuisés. Veuillez choisir un plan.";
+      return "Crédits épuisés - Choisir plan";
     }
     if (!canSendMessage) {
-      return "Vous ne pouvez pas envoyer de message actuellement.";
+      return "Analytics indisponible";
     }
-    return 'Posez votre question en langage naturel... (ex: stock de Paracétamol)';
+    return 'Posez votre question en langage naturel... (ex: Rotation de Paracétamol)';
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -202,37 +202,70 @@ export default function ChatInput() {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="sticky bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200 shadow-sm"
-    >
-      <div className="flex items-center space-x-3">
-        <Input
-          type="text"
-          placeholder={placeholderText()}
-          value={currentQuery}
-          onChange={(e) => setCurrentQuery(e.target.value)}
-          disabled={!canSendMessage || isComponentLoading}
-          className="flex-1 h-12 px-4 rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-        />
-        <Button 
-          type="submit" 
-          disabled={!canSendMessage || !currentQuery.trim() || isComponentLoading}
-          className="h-12 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-        >
-          {isComponentLoading ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-          ) : (
-            <SendHorizonal className="w-5 h-5" />
+    <div className="bg-white border-t border-gray-200">
+      <div className="max-w-4xl mx-auto px-6 py-6">
+        <form onSubmit={handleSubmit} className="relative">
+          <div className="relative flex items-end bg-white border border-gray-300 rounded-2xl shadow-sm chat-input-focus focus-within:ring-2 focus-within:ring-chatgpt-accent focus-within:border-chatgpt-accent transition-all duration-200">
+            <textarea
+              placeholder={placeholderText()}
+              value={currentQuery}
+              onChange={(e) => {
+                setCurrentQuery(e.target.value);
+                // Auto-resize
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = Math.min(target.scrollHeight, 200) + 'px';
+              }}
+              disabled={!canSendMessage || isComponentLoading}
+              rows={1}
+              className="flex-1 resize-none bg-transparent px-5 py-4 text-base text-gray-900 placeholder:text-gray-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 max-h-48 min-h-[56px] transition-all duration-200"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (currentQuery.trim() && canSendMessage && !isComponentLoading) {
+                    handleSubmit(e as any);
+                  }
+                }
+              }}
+              style={{
+                height: 'auto',
+                minHeight: '56px',
+              }}
+            />
+            <div className="flex items-center p-2">
+              <Button 
+                type="submit" 
+                size="sm"
+                disabled={!canSendMessage || !currentQuery.trim() || isComponentLoading}
+                className="h-10 w-10 p-0 rounded-xl bg-chatgpt-accent hover:bg-chatgpt-accent-hover disabled:opacity-30 disabled:hover:bg-chatgpt-accent text-white transition-all duration-200 shadow-sm chatgpt-hover"
+              >
+                {isComponentLoading ? (
+                  <div className="loading-dots text-white">
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                  </div>
+                ) : (
+                  <SendHorizonal className="w-5 h-5" />
+                )}
+                <span className="sr-only">Envoyer</span>
+              </Button>
+            </div>
+          </div>
+          
+          {!canSendMessage && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-sm text-red-700 text-center font-medium">
+                {placeholderText()}
+              </p>
+            </div>
           )}
-          <span className="sr-only">Envoyer</span>
-        </Button>
+          
+          <div className="flex items-center justify-center mt-3 text-xs text-gray-500">
+            <span>Appuyez sur <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">Entrée</kbd> pour envoyer • <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">Maj+Entrée</kbd> pour une nouvelle ligne</span>
+          </div>
+        </form>
       </div>
-      {!canSendMessage && (
-         <p className="text-xs text-red-500 mt-1 text-center">
-           {placeholderText()}
-         </p>
-      )}
-    </form>
+    </div>
   );
 }

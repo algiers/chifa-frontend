@@ -20,19 +20,29 @@ const supabase = createClient(
 );
 
 async function verifyAdminUser(request: NextRequest) {
+  console.log('[verifyAdminUser] Starting verification...');
   const authHeader = request.headers.get('authorization');
+  console.log('[verifyAdminUser] Auth header present:', !!authHeader);
+  
   if (!authHeader?.startsWith('Bearer ')) {
+    console.log('[verifyAdminUser] No valid Bearer token found');
     return null;
   }
 
   const token = authHeader.substring(7);
+  console.log('[verifyAdminUser] Token extracted, length:', token.length);
   
   try {
     const { data: { user }, error } = await supabase.auth.getUser(token);
+    console.log('[verifyAdminUser] getUser result - user:', !!user, 'error:', !!error);
+    
     if (error || !user) {
+      console.log('[verifyAdminUser] Auth error or no user:', error?.message);
       return null;
     }
 
+    console.log('[verifyAdminUser] User authenticated, checking admin status for user:', user.id);
+    
     // Vérifier que l'utilisateur est admin
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -40,12 +50,18 @@ async function verifyAdminUser(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
+    console.log('[verifyAdminUser] Profile query result - profile:', !!profile, 'error:', !!profileError);
+    console.log('[verifyAdminUser] Is admin:', profile?.is_admin);
+
     if (profileError || !profile?.is_admin) {
+      console.log('[verifyAdminUser] Not admin or profile error:', profileError?.message);
       return null;
     }
 
+    console.log('[verifyAdminUser] Admin verification successful');
     return user;
   } catch (error) {
+    console.error('[verifyAdminUser] Unexpected error:', error);
     return null;
   }
 }
@@ -59,18 +75,36 @@ function generateVirtualKey(codePs: string): string {
 
 // Helper pour générer un mot de passe temporaire sécurisé
 function generateTempPassword(length = 12) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';
+  // Supabase exige au moins 6 caractères avec au moins une lettre majuscule, une minuscule et un chiffre
+  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijkmnopqrstuvwxyz';
+  const numbers = '23456789';
+  const symbols = '!@#$%&*';
+  
+  // S'assurer qu'on a au moins un de chaque type requis
   let pwd = '';
-  for (let i = 0; i < length; i++) {
-    pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+  pwd += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+  pwd += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+  pwd += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  pwd += symbols.charAt(Math.floor(Math.random() * symbols.length));
+  
+  // Remplir le reste avec tous les caractères
+  const allChars = uppercase + lowercase + numbers + symbols;
+  for (let i = pwd.length; i < length; i++) {
+    pwd += allChars.charAt(Math.floor(Math.random() * allChars.length));
   }
-  return pwd;
+  
+  // Mélanger le mot de passe pour éviter un pattern prévisible
+  return pwd.split('').sort(() => Math.random() - 0.5).join('');
 }
 
 // GET /api/admin/pharmacies - Lister toutes les pharmacies ou récupérer une pharmacie spécifique
 export async function GET(request: NextRequest) {
+  console.log('[API Admin Pharmacies] GET request received');
   const user = await verifyAdminUser(request);
+  console.log('[API Admin Pharmacies] User verification result:', !!user);
   if (!user) {
+    console.log('[API Admin Pharmacies] Unauthorized - no admin user');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -295,11 +329,43 @@ export async function PATCH(request: NextRequest) {
       code_ps, 
       phone_number, 
       email,
-      virtual_key 
+      virtual_key,
+      password // <-- Ajout pour la réinitialisation
     } = await request.json();
 
     if (!id) {
       return NextResponse.json({ error: 'Missing pharmacy id' }, { status: 400 });
+    }
+
+    // Si un mot de passe est fourni, réinitialiser le mot de passe Supabase
+    if (password) {
+      let newPassword = password;
+      if (password === true) {
+        newPassword = generateTempPassword();
+      }
+      
+      console.log(`[ADMIN API] Attempting to reset password for user ID: ${id}`);
+      console.log(`[ADMIN API] Generated password length: ${newPassword.length}`);
+      
+      const { data: updateData, error: pwError } = await supabaseAdmin.auth.admin.updateUserById(id, { 
+        password: newPassword,
+        email_confirm: true // S'assurer que l'email reste confirmé
+      });
+      
+      if (pwError) {
+        console.error(`[ADMIN API] Password reset error for user ${id}:`, pwError);
+        return NextResponse.json({ 
+          error: 'Erreur lors de la réinitialisation du mot de passe: ' + pwError.message,
+          details: pwError
+        }, { status: 500 });
+      }
+      
+      console.log(`[ADMIN API] Password reset successful for user ${id}`);
+      return NextResponse.json({ 
+        message: 'Mot de passe réinitialisé avec succès', 
+        temp_password: newPassword,
+        user_updated: !!updateData
+      });
     }
 
     // Construire l'objet de mise à jour
