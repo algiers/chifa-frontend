@@ -86,7 +86,7 @@ export function useAuth() {
         window.location.href = '/chat-v2';
       } else {
         console.error('Session non trouvée après connexion');
-        throw new Error('Échec de l'authentification');
+        throw new Error("Échec de l'authentification");
       }
       
       return true;

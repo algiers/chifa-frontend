@@ -6,7 +6,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { SessionProvider } from 'next-auth/react';
-import type { Session } from 'next-auth';
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -61,10 +60,10 @@ describe('Authentication Integration Tests', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
+
   // Helper pour wrapper le hook dans un SessionProvider
   const withSessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <SessionProvider session={null as Session | null}>{children}</SessionProvider>
-  );
+    <SessionProvider session={null}>{children}</SessionProvider>
   );
 
   describe('Authentication Hooks', () => {
@@ -380,7 +379,7 @@ describe('Authentication Integration Tests', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAuth());
+      const { result } = renderHook(() => useAuth(), { wrapper: withSessionProvider });
 
       // Wait for the hook to initialize
       await act(async () => {
@@ -414,7 +413,7 @@ describe('Authentication Integration Tests', () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useAuth());
+      const { result } = renderHook(() => useAuth(), { wrapper: withSessionProvider });
 
       // Then simulate session expiration
       mockSupabaseClient.auth.getSession.mockResolvedValue({
@@ -437,7 +436,7 @@ describe('Authentication Integration Tests', () => {
     it('should handle network errors gracefully', async () => {
       mockSupabaseClient.auth.getSession.mockRejectedValue(new Error('Network error'));
 
-      const { result } = renderHook(() => useAuth());
+      const { result } = renderHook(() => useAuth(), { wrapper: withSessionProvider });
 
       // Should not crash and should remain in loading state or show error
       expect(result.current.user).toBeNull();

@@ -16,7 +16,7 @@ const mockUser = {
 
 vi.mock('@/lib/auth/supabase-auth-adapter', () => ({
   getSupabaseUser: vi.fn(),
-  createSupabaseServerClient: vi.fn(),
+  createSupabaseClientClient: vi.fn(),
 }));
 
 // Mock the credits manager
@@ -33,7 +33,11 @@ vi.mock('@/lib/utils/error-handling', () => ({
 
 // Mock Next.js cookies
 vi.mock('next/headers', () => ({
-  cookies: () => ({}),
+  cookies: () => ({
+    get: (name: string) => ({ value: 'mock-cookie-value' }),
+    set: vi.fn(),
+    remove: vi.fn(),
+  }),
 }));
 
 // Mock UUID
@@ -56,28 +60,50 @@ const mockSupabaseClient = {
 };
 
 describe('Chat API Integration Tests', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    
-    // Setup default mocks
-    const { getSupabaseUser, createSupabaseServerClient } = require('@/lib/auth/supabase-auth-adapter');
-    const { checkCreditsAvailable, consumeCredits, calculateChatCredits } = require('@/lib/utils/credits-manager');
-    
-    getSupabaseUser.mockResolvedValue(mockUser);
-    createSupabaseServerClient.mockReturnValue(mockSupabaseClient);
-    checkCreditsAvailable.mockResolvedValue({ available: true, credits: { remaining_credits: 10 } });
-    consumeCredits.mockResolvedValue({ success: true, remainingCredits: 9 });
-    calculateChatCredits.mockReturnValue(1);
-    
-    // Mock successful database operations
-    mockSupabaseClient.from.mockReturnValue({
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({ data: { id: 'conv-123' }, error: null }),
-        })),
+beforeEach(async () => {
+  vi.clearAllMocks();
+
+  // Setup default mocks using dynamic import and vi.mocked
+  const authAdapter = await import('@/lib/auth/supabase-auth-adapter');
+  const creditsManager = await import('@/lib/utils/credits-manager');
+
+  const mockedGetSupabaseUser = vi.mocked(authAdapter.getSupabaseUser);
+  const mockedCreateSupabaseClientClient = vi.mocked(authAdapter.createSupabaseClientClient);
+  const mockedCheckCreditsAvailable = vi.mocked(creditsManager.checkCreditsAvailable);
+  const mockedConsumeCredits = vi.mocked(creditsManager.consumeCredits);
+  const mockedCalculateChatCredits = vi.mocked(creditsManager.calculateChatCredits);
+
+  mockedGetSupabaseUser.mockResolvedValue(mockUser);
+  mockedCreateSupabaseClientClient.mockReturnValue(mockSupabaseClient);
+  mockedCheckCreditsAvailable.mockResolvedValue({
+    available: true,
+    credits: {
+      user_id: 'user-123',
+      total_credits: 100,
+      used_credits: 90,
+      remaining_credits: 10,
+      demo_credits: 0,
+      demo_used: 0,
+      subscription_type: 'free',
+      credits_expire_at: undefined,
+      last_reset_at: '',
+      created_at: '',
+      updated_at: '',
+    },
+    error: undefined,
+  });
+  mockedConsumeCredits.mockResolvedValue({ success: true, remainingCredits: 9 });
+  mockedCalculateChatCredits.mockReturnValue(1);
+
+  // Mock successful database operations
+  mockSupabaseClient.from.mockReturnValue({
+    insert: vi.fn(() => ({
+      select: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({ data: { id: 'conv-123' }, error: null }),
       })),
-      update: vi.fn(() => ({
-        eq: vi.fn().mockResolvedValue({ error: null }),
+    })),
+    update: vi.fn(() => ({
+      eq: vi.fn().mockResolvedValue({ error: null }),
       })),
     });
   });
@@ -88,8 +114,9 @@ describe('Chat API Integration Tests', () => {
 
   describe('Authentication Tests', () => {
     it('should return 401 when user is not authenticated', async () => {
-      const { getSupabaseUser } = require('@/lib/auth/supabase-auth-adapter');
-      getSupabaseUser.mockResolvedValue(null);
+      const authAdapter = await import('@/lib/auth/supabase-auth-adapter');
+      const mockedGetSupabaseUser = vi.mocked(authAdapter.getSupabaseUser);
+      mockedGetSupabaseUser.mockResolvedValue(null);
 
       const request = new NextRequest('http://localhost:3000/api/chat/chifa', {
         method: 'POST',
@@ -208,10 +235,23 @@ describe('Chat API Integration Tests', () => {
 
   describe('Credits System Tests', () => {
     it('should return 402 when user has insufficient credits', async () => {
-      const { checkCreditsAvailable } = require('@/lib/utils/credits-manager');
-      checkCreditsAvailable.mockResolvedValue({
+      const creditsManager = await import('@/lib/utils/credits-manager');
+      const mockedCheckCreditsAvailable = vi.mocked(creditsManager.checkCreditsAvailable);
+      mockedCheckCreditsAvailable.mockResolvedValue({
         available: false,
-        credits: { remaining_credits: 0 },
+        credits: {
+          user_id: 'user-123',
+          total_credits: 100,
+          used_credits: 100,
+          remaining_credits: 0,
+          demo_credits: 0,
+          demo_used: 0,
+          subscription_type: 'free',
+          credits_expire_at: undefined,
+          last_reset_at: '',
+          created_at: '',
+          updated_at: '',
+        },
         error: { message: 'Insufficient credits', code: 'CREDITS_002' },
       });
 
@@ -231,12 +271,12 @@ describe('Chat API Integration Tests', () => {
     });
 
     it('should calculate credits correctly for different message types', async () => {
-      const { calculateChatCredits } = require('@/lib/utils/credits-manager');
-      
+      const creditsManager = await import('@/lib/utils/credits-manager');
+      const mockedCalculateChatCredits = vi.mocked(creditsManager.calculateChatCredits);
       // Mock different credit calculations
-      calculateChatCredits.mockReturnValueOnce(1); // Simple message
-      calculateChatCredits.mockReturnValueOnce(3); // SQL message
-      calculateChatCredits.mockReturnValueOnce(2); // Long message
+      mockedCalculateChatCredits.mockReturnValueOnce(1); // Simple message
+      mockedCalculateChatCredits.mockReturnValueOnce(3); // SQL message
+      mockedCalculateChatCredits.mockReturnValueOnce(2); // Long message
 
       // Test simple message
       let request = new NextRequest('http://localhost:3000/api/chat/chifa', {
@@ -257,11 +297,12 @@ describe('Chat API Integration Tests', () => {
       });
 
       await POST(request);
-      expect(calculateChatCredits).toHaveBeenCalledWith('Hello', false, true);
+      expect(mockedCalculateChatCredits).toHaveBeenCalledWith('Hello', false, true);
     });
 
     it('should consume credits after successful operation', async () => {
-      const { consumeCredits } = require('@/lib/utils/credits-manager');
+      const creditsManager = await import('@/lib/utils/credits-manager');
+      const mockedConsumeCredits = vi.mocked(creditsManager.consumeCredits);
 
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -285,7 +326,7 @@ describe('Chat API Integration Tests', () => {
       // Wait a bit for the async processing to complete
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      expect(consumeCredits).toHaveBeenCalled();
+      expect(mockedConsumeCredits).toHaveBeenCalled();
     });
   });
 
@@ -498,14 +539,30 @@ describe('Chat API Integration Tests', () => {
     it('should handle database errors gracefully', async () => {
       // Mock database error
       mockSupabaseClient.from.mockReturnValue({
-        insert: vi.fn(() => ({
-          select: vi.fn(() => ({
-            single: vi.fn().mockResolvedValue({ 
-              data: null, 
-              error: { message: 'Database error' } 
-            })),
-          })),
-        })),
+        insert: vi.fn(() => {
+          return {
+            select: vi.fn(() => {
+              return {
+                single: vi.fn().mockResolvedValue({
+                  data: null,
+                  error: { message: 'Database error' }
+                })
+              };
+            })
+          };
+        }),
+        update: vi.fn(() => {
+          return {
+            eq: vi.fn(() => {
+              return {
+                single: vi.fn().mockResolvedValue({
+                  data: null,
+                  error: { message: 'Database error' }
+                })
+              };
+            })
+          };
+        })
       });
 
       global.fetch = vi.fn().mockResolvedValue({
@@ -548,8 +605,9 @@ describe('Chat API Integration Tests', () => {
     });
 
     it('should handle unexpected errors', async () => {
-      const { getSupabaseUser } = require('@/lib/auth/supabase-auth-adapter');
-      getSupabaseUser.mockRejectedValue(new Error('Unexpected error'));
+      const authAdapter = await import('@/lib/auth/supabase-auth-adapter');
+      const mockedGetSupabaseUser = vi.mocked(authAdapter.getSupabaseUser);
+      mockedGetSupabaseUser.mockRejectedValue(new Error('Unexpected error'));
 
       const request = new NextRequest('http://localhost:3000/api/chat/chifa', {
         method: 'POST',
@@ -592,8 +650,9 @@ describe('Chat API Integration Tests', () => {
       // Wait for async processing
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const { consumeCredits } = require('@/lib/utils/credits-manager');
-      expect(consumeCredits).toHaveBeenCalledWith(
+      const creditsManager = await import('@/lib/utils/credits-manager');
+      const mockedConsumeCredits = vi.mocked(creditsManager.consumeCredits);
+      expect(mockedConsumeCredits).toHaveBeenCalledWith(
         mockUser.id,
         expect.any(Number),
         'sql_query',
