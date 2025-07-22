@@ -151,7 +151,7 @@ export default function AdminSidebar({ className, onItemClick }: AdminSidebarPro
     const isActive = pathname === item.href;
     const hasChildren = item.items && item.items.length > 0;
     const isExpanded = expandedItems.includes(item.title);
-    const isParentActive = hasChildren && item.items.some(child => pathname === child.href);
+    const isParentActive = hasChildren && item.items && item.items.some(child => pathname === child.href);
 
     if (hasChildren) {
       return (
@@ -175,7 +175,7 @@ export default function AdminSidebar({ className, onItemClick }: AdminSidebarPro
           </button>
           {isExpanded && (
             <div className="space-y-1 pl-4">
-              {item.items.map(child => renderSidebarItem(child, level + 1))}
+              {item.items && item.items.map(child => renderSidebarItem(child, level + 1))}
             </div>
           )}
         </div>
