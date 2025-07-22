@@ -17,14 +17,19 @@ interface RegisterPharmacyBody {
   userId: string;
 }
 
-const generateSimpleRandomSuffix = (): string => {
-  return Math.random().toString(36).substring(2, 8);
-};
 
-const generateVirtualKey = (codePs: string): string => {
-  const timestamp = Math.floor(Date.now() / 1000);
-  const randomSuffix = generateSimpleRandomSuffix();
-  return `sk-${codePs}-${timestamp}-${randomSuffix}`;
+// Génération UUID v4 compatible Deno (crypto.getRandomValues)
+function uuidv4() {
+  // https://stackoverflow.com/a/2117523/508355
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = (crypto.getRandomValues(new Uint8Array(1))[0] & 0xf) >> 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+const generateVirtualKey = (): string => {
+  return `sk-${uuidv4()}`;
 };
 
 serve(async (req: Request) => {
@@ -85,7 +90,7 @@ serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: `Le code PS '${codePs}' est déjà utilisé par un autre compte.` }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const litellmVirtualKey = generateVirtualKey(codePs);
+    const litellmVirtualKey = generateVirtualKey();
 
     const { error: secretInsertError } = await supabaseAdminClient
       .from('pharmacy_secrets')
