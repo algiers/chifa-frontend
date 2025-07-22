@@ -57,14 +57,37 @@ function generateVirtualKey(codePs: string): string {
   return `sk-${codePs}-${timestamp}-${randomSuffix}`;
 }
 
-// Helper pour générer un mot de passe temporaire sécurisé
-function generateTempPassword(length = 12) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';
-  let pwd = '';
-  for (let i = 0; i < length; i++) {
-    pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+// Helper pour générer un mot de passe temporaire sécurisé conforme aux exigences Supabase
+function generateTempPassword(length = 14) {
+  // Supabase exige : au moins 6 caractères, avec majuscules, minuscules, chiffres et caractères spéciaux
+  // Utilisons des caractères sûrs pour éviter les problèmes de copie/collage
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const numbers = '0123456789';
+  const symbols = '!@#$%*+=?'; // Caractères sûrs, éviter les ambigus comme 0, O, l, I
+  
+  // Garantir au moins 2 caractères de chaque type pour plus de sécurité
+  let password = '';
+  
+  // Ajouter 2 caractères de chaque type
+  for (let i = 0; i < 2; i++) {
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
   }
-  return pwd;
+  
+  // Compléter avec des caractères aléatoires pour atteindre la longueur souhaitée
+  const allChars = lowercase + uppercase + numbers + symbols;
+  for (let i = password.length; i < length; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+  
+  // Mélanger les caractères pour éviter un pattern prévisible
+  const shuffled = password.split('').sort(() => Math.random() - 0.5).join('');
+  
+  console.log('[generateTempPassword] Generated password length:', shuffled.length);
+  return shuffled;
 }
 
 // GET /api/admin/pharmacies - Lister toutes les pharmacies ou récupérer une pharmacie spécifique
@@ -161,8 +184,7 @@ export async function POST(request: NextRequest) {
       pharmacy_name, 
       pharmacy_address, 
       code_ps, 
-      phone_number,
-      virtual_key
+      phone_number
     } = await request.json();
 
     if (!email || !full_name || !pharmacy_name || !code_ps) {
@@ -171,8 +193,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Générer un mot de passe temporaire si non fourni
-    const tempPassword = password || generateTempPassword();
+    // Générer un mot de passe temporaire si non fourni ou vide
+    const tempPassword = (password && password.trim()) ? password.trim() : generateTempPassword();
+    
+    console.log('[POST /api/admin/pharmacies] Creating pharmacy with temp password length:', tempPassword.length);
 
     // Vérifier que le code PS n'existe pas déjà
     const { data: existingPharmacy } = await supabaseAdmin
@@ -201,9 +225,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authError.message }, { status: 500 });
     }
 
-    // Utiliser la clé virtuelle fournie ou en générer une nouvelle
-    const finalVirtualKey = virtual_key || generateVirtualKey(code_ps);
-
     // Créer le profil dans la table profiles
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -229,21 +250,83 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
 
-    // Stocker la clé virtuelle dans pharmacy_secrets
-    await supabaseAdmin
-      .from('pharmacy_secrets')
-      .upsert({ 
-        code_ps, 
-        litellm_virtual_key: finalVirtualKey 
-      }, { onConflict: 'code_ps' });
+    // Créer une clé virtuelle LiteLLM pour la pharmacie
+    const litellmApiUrl = process.env.LITELLM_PROXY_URL || 'http://frp.youcef.xyz:4000';
+    const litellmMasterKey = process.env.LITELLM_MASTER_KEY || 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
+    
+    try {
+      const virtualKeyResponse = await fetch(`${litellmApiUrl}/key/generate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${litellmMasterKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          models: ['deepseek', 'deepseek-chat', 'deepseek/deepseek-chat'],
+          aliases: {
+            'gpt-4o-mini': 'deepseek-chat'
+          },
+          max_budget: 100,
+          budget_duration: '1mo',
+          metadata: {
+            pharmacy_code: code_ps,
+            pharmacy_name: pharmacy_name,
+            pharmacist_name: full_name,
+            created_by: 'admin-api'
+          }
+        })
+      });
 
-    return NextResponse.json({
-      message: 'Pharmacie créée avec succès',
-      pharmacy: profileData,
-      virtual_key: finalVirtualKey,
-      temp_password: tempPassword // Afficher à l'admin
-    });
+      if (!virtualKeyResponse.ok) {
+        console.error('[POST /api/admin/pharmacies] Error creating LiteLLM virtual key:', await virtualKeyResponse.text());
+        throw new Error('Failed to create LiteLLM virtual key');
+      }
+
+      const virtualKeyData = await virtualKeyResponse.json();
+      const finalVirtualKey = virtualKeyData.key;
+
+      // Stocker la clé virtuelle dans pharmacy_secrets
+      await supabaseAdmin
+        .from('pharmacy_secrets')
+        .upsert({ 
+          code_ps, 
+          litellm_virtual_key: finalVirtualKey 
+        }, { onConflict: 'code_ps' });
+
+      return NextResponse.json({
+        message: 'Pharmacie créée avec succès',
+        pharmacy: {
+          ...profileData,
+          virtual_key: finalVirtualKey
+        },
+        temp_password: tempPassword // Afficher à l'admin
+      });
+    } catch (error) {
+      console.error('[POST /api/admin/pharmacies] Error with LiteLLM key generation:', error);
+      
+      // Générer une clé de secours au format local si l'API LiteLLM échoue
+      const backupVirtualKey = generateVirtualKey(code_ps);
+      
+      // Stocker la clé virtuelle de secours
+      await supabaseAdmin
+        .from('pharmacy_secrets')
+        .upsert({ 
+          code_ps, 
+          litellm_virtual_key: backupVirtualKey 
+        }, { onConflict: 'code_ps' });
+        
+      return NextResponse.json({
+        message: 'Pharmacie créée avec succès (clé virtuelle de secours générée)',
+        pharmacy: {
+          ...profileData,
+          virtual_key: backupVirtualKey
+        },
+        temp_password: tempPassword,
+        warning: 'Une clé virtuelle de secours a été générée car l\'API LiteLLM n\'était pas disponible'
+      });
+    }
   } catch (error) {
+    console.error('[POST /api/admin/pharmacies] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -348,4 +431,4 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}

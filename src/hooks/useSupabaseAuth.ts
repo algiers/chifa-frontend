@@ -39,6 +39,52 @@ export function useSupabaseAuth() {
   const refreshSession = useCallback(async (): Promise<boolean> => {
     try {
       console.log('[useSupabaseAuth] Refreshing session...');
+      
+      // Vérifier d'abord si nous avons un refresh token dans le localStorage
+      let refreshToken = null;
+      
+      // Liste des clés possibles pour les tokens Supabase
+      const possibleKeys = [
+        'sb-ddeibfjxpwnisguehnmo-auth-token',
+        'supabase.auth.token'
+      ];
+      
+      for (const key of possibleKeys) {
+        const accessToken = localStorage.getItem(key) || sessionStorage.getItem(key);
+        if (accessToken) {
+          try {
+            const tokenData = JSON.parse(accessToken);
+            if (tokenData.refresh_token) {
+              refreshToken = tokenData.refresh_token;
+              console.log(`[useSupabaseAuth] Found refresh token in storage with key: ${key}`);
+              break;
+            }
+          } catch (e) {
+            console.error(`[useSupabaseAuth] Failed to parse token from ${key}:`, e);
+          }
+        }
+      }
+      
+      // Si nous avons un refresh token, essayer de l'utiliser explicitement
+      if (refreshToken) {
+        try {
+          console.log('[useSupabaseAuth] Refreshing with explicit refresh token');
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession({
+            refresh_token: refreshToken
+          });
+          
+          if (!refreshError && refreshData.session) {
+            console.log('[useSupabaseAuth] Session refreshed successfully with explicit token');
+            return true;
+          } else {
+            console.error('[useSupabaseAuth] Explicit refresh failed:', refreshError);
+          }
+        } catch (refreshError) {
+          console.error('[useSupabaseAuth] Error in explicit refresh:', refreshError);
+        }
+      }
+      
+      // Fallback: utiliser refreshSession sans paramètres
       const { data, error } = await supabase.auth.refreshSession();
       
       if (error) {
@@ -163,78 +209,134 @@ export function useSupabaseAuth() {
     try {
       console.log('[useSupabaseAuth] Getting session from Supabase...');
       
-      // Contournement : utiliser getUser() au lieu de getSession() car getSession() se bloque
-      const userPromise = supabase.auth.getUser();
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('User fetch timeout')), 5000); // 5 secondes
-      });
-      
-      const { data: { user }, error } = await Promise.race([userPromise, timeoutPromise]) as any;
-      
-      if (error) {
-        console.error('[useSupabaseAuth] Error getting user:', error);
-        return null;
-      }
-
-      if (!user) {
-        console.log('[useSupabaseAuth] No active user');
-        return null;
-      }
-
-      console.log('[useSupabaseAuth] User retrieved, creating session object...');
-
-      // Créer un objet session-like avec les informations utilisateur
-      // Récupérer le token depuis localStorage/sessionStorage
-      const accessToken = localStorage.getItem('sb-ddeibfjxpwnisguehnmo-auth-token') || 
-                         sessionStorage.getItem('sb-ddeibfjxpwnisguehnmo-auth-token');
-      
-      if (!accessToken) {
-        console.log('[useSupabaseAuth] No access token found in storage');
-        return null;
-      }
-
-      // Parser le token pour extraire les informations
-      let tokenData;
+      // Essayer d'abord getSession() sans timeout pour être sûr d'avoir une réponse
+      let session = null;
       try {
-        tokenData = JSON.parse(accessToken);
-      } catch {
-        console.log('[useSupabaseAuth] Invalid token format in storage');
-        return null;
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (!sessionError && sessionData?.session) {
+          session = sessionData.session;
+          console.log('[useSupabaseAuth] Session retrieved successfully from Supabase');
+          
+          // Vérifier si le token est valide
+          if (session.expires_at) {
+            const now = Math.floor(Date.now() / 1000);
+            const expiresAt = session.expires_at;
+            const timeLeft = expiresAt - now;
+            
+            if (timeLeft <= 60) { // Moins d'une minute restante
+              console.log('[useSupabaseAuth] Token expires soon, refreshing...');
+              const refreshed = await refreshSession();
+              if (refreshed) {
+                const { data: newSessionData } = await supabase.auth.getSession();
+                if (newSessionData?.session) {
+                  session = newSessionData.session;
+                  console.log('[useSupabaseAuth] Session refreshed successfully');
+                }
+              }
+            }
+          }
+          
+          return session;
+        } else {
+          console.log('[useSupabaseAuth] No session from Supabase API:', sessionError);
+        }
+      } catch (sessionFetchError) {
+        console.log('[useSupabaseAuth] Session fetch failed, trying alternative method:', sessionFetchError);
       }
 
-      const session = {
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expires_at: tokenData.expires_at,
-        user: user
-      };
-
-      console.log('[useSupabaseAuth] Session created, expires at:', new Date(session.expires_at * 1000));
-
-      // Vérifier si le token expire bientôt (dans les 2 prochaines minutes)
-      const expiresAt = session.expires_at || 0;
-      const timeUntilExpiry = (expiresAt * 1000) - Date.now();
-      
-      if (timeUntilExpiry < 2 * 60 * 1000) { // 2 minutes
-        console.log('[useSupabaseAuth] Token expires soon, refreshing...');
-        const refreshed = await refreshSession();
+      // Si getSession() échoue, essayer de récupérer depuis le localStorage
+      if (!session) {
+        console.log('[useSupabaseAuth] Trying to get session from localStorage...');
         
-        if (refreshed) {
-          // Après refresh, récupérer le nouveau token
-          const newAccessToken = localStorage.getItem('sb-ddeibfjxpwnisguehnmo-auth-token') || 
-                                sessionStorage.getItem('sb-ddeibfjxpwnisguehnmo-auth-token');
-          if (newAccessToken) {
-            const newTokenData = JSON.parse(newAccessToken);
-            return {
-              access_token: newTokenData.access_token,
-              refresh_token: newTokenData.refresh_token,
-              expires_at: newTokenData.expires_at,
-              user: user
-            };
+        // Liste des clés possibles pour les tokens Supabase
+        const possibleKeys = [
+          'sb-ddeibfjxpwnisguehnmo-auth-token',
+          'supabase.auth.token'
+        ];
+        
+        let tokenData = null;
+        
+        for (const key of possibleKeys) {
+          const accessToken = localStorage.getItem(key) || sessionStorage.getItem(key);
+          if (accessToken) {
+            try {
+              const parsedData = JSON.parse(accessToken);
+              if (parsedData.access_token) {
+                tokenData = parsedData;
+                console.log(`[useSupabaseAuth] Found token in storage with key: ${key}`);
+                break;
+              }
+            } catch (e) {
+              console.error(`[useSupabaseAuth] Failed to parse token from ${key}:`, e);
+            }
           }
         }
+        
+        if (!tokenData) {
+          console.log('[useSupabaseAuth] No access token found in storage');
+          return null;
+        }
+
+        // Vérifier si le token est encore valide
+        const expiresAt = tokenData.expires_at || 0;
+        const timeUntilExpiry = (expiresAt * 1000) - Date.now();
+        
+        if (timeUntilExpiry <= 0) {
+          console.log('[useSupabaseAuth] Token expired, attempting refresh...');
+          const refreshed = await refreshSession();
+          if (!refreshed) {
+            console.log('[useSupabaseAuth] Token refresh failed');
+            
+            // Dernière tentative: forcer une nouvelle session avec les credentials stockés
+            try {
+              console.log('[useSupabaseAuth] Last resort: trying to get a new session...');
+              const { data: newSession } = await supabase.auth.getSession();
+              if (newSession?.session) {
+                return newSession.session;
+              }
+            } catch (e) {
+              console.error('[useSupabaseAuth] Failed to get new session:', e);
+            }
+            
+            return null;
+          }
+          
+          // Récupérer le nouveau token après refresh
+          const { data: refreshedSession } = await supabase.auth.getSession();
+          if (refreshedSession?.session) {
+            return refreshedSession.session;
+          }
+          
+          // Si on ne peut pas obtenir la session via l'API, essayer le localStorage à nouveau
+          for (const key of possibleKeys) {
+            const newAccessToken = localStorage.getItem(key) || sessionStorage.getItem(key);
+            if (newAccessToken) {
+              try {
+                tokenData = JSON.parse(newAccessToken);
+                break;
+              } catch (e) {
+                console.error(`[useSupabaseAuth] Failed to parse refreshed token from ${key}:`, e);
+              }
+            }
+          }
+        }
+
+        // Créer un objet session-like
+        session = {
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+          expires_at: tokenData.expires_at,
+          user: tokenData.user
+        };
       }
 
+      if (!session || !session.access_token) {
+        console.log('[useSupabaseAuth] No valid session available');
+        return null;
+      }
+
+      console.log('[useSupabaseAuth] Valid session found, expires at:', new Date((session.expires_at || 0) * 1000));
       return session;
     } catch (error) {
       console.error('[useSupabaseAuth] Error in getValidSession:', error);

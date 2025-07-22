@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { getAgentInvokeUrl } from '@/config/services';
 
 // Client Supabase avec service_role (bypass RLS)
 const supabaseAdmin = createClient(
@@ -20,9 +21,74 @@ interface SendMessageRequest {
   conversationId?: string | null;
 }
 
+async function validateAuthToken(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.error('[API] Missing authorization header');
+    return { error: 'Missing or invalid authorization header', status: 401 };
+  }
+
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  console.log('[API] Validating token (first 50 chars):', token.substring(0, 50) + '...');
+  
+  try {
+    // Create a temporary client with the user's token to validate it
+    const supabaseWithToken = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      }
+    );
+    
+    // Try to get the user with their token
+    const { data: { user }, error } = await supabaseWithToken.auth.getUser();
+    
+    if (error || !user) {
+      console.error('[API] Token validation failed:', error?.message || 'No user found');
+      return { error: 'Invalid or expired token', status: 401 };
+    }
+    
+    console.log('[API] Token validation successful for user:', user.id);
+    return { user, error: null };
+  } catch (error) {
+    console.error('[API] Token validation error:', error);
+    return { error: 'Token validation failed', status: 401 };
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
+    console.log('[API] Received chat message request');
+    
+    // Validate authentication token first
+    const authResult = await validateAuthToken(request);
+    if (authResult.error) {
+      console.error('[API] Authentication failed:', authResult.error);
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.status }
+      );
+    }
+
+    const authenticatedUser = authResult.user!;
     const { query, userId, codePs, conversationId }: SendMessageRequest = await request.json();
+    
+    console.log('[API] Request validated for user:', authenticatedUser.id);
+    
+    // Verify that the authenticated user matches the requested userId
+    if (authenticatedUser.id !== userId) {
+      console.error('[API] User ID mismatch:', { authenticatedUserId: authenticatedUser.id, requestedUserId: userId });
+      return NextResponse.json(
+        { error: 'User ID mismatch. Access denied.' },
+        { status: 403 }
+      );
+    }
     
     console.log('[API] Send message request:', {
       userId,
@@ -101,7 +167,11 @@ export async function POST(request: NextRequest) {
     const litellmVirtualKey = secret.litellm_virtual_key;
 
     // Appeler l'agent LangGraph (URL centralisée)
-    const agentUrl = process.env.CHIFA_LANGGRAPH_AGENT_URL || 'http://localhost:8001/api/v1/agent/invoke';
+    const agentUrl = process.env.CHIFA_LANGGRAPH_AGENT_URL || getAgentInvokeUrl();
+    
+    console.log('[API] Agent URL resolved to:', agentUrl);
+    console.log('[API] Environment CHIFA_LANGGRAPH_AGENT_URL:', process.env.CHIFA_LANGGRAPH_AGENT_URL);
+    console.log('[API] Fallback getAgentInvokeUrl():', getAgentInvokeUrl());
     
     const agentRequestBody = {
       query: query,

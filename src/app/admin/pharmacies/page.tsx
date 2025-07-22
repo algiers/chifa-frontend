@@ -3,6 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import PharmacyCredentialsModal from '@/components/admin/PharmacyCredentialsModal';
+import TestLoginButton from '@/components/admin/TestLoginButton';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 interface Pharmacy {
   id: string;
@@ -48,6 +51,10 @@ export default function AdminPharmaciesPage() {
   // États pour la création de pharmacie
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
+  
+  // État pour le modal des informations de connexion
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [newPharmacyCredentials, setNewPharmacyCredentials] = useState<any>(null);
   const [formData, setFormData] = useState<PharmacyFormData>({
     email: '',
     password: '',
@@ -58,6 +65,30 @@ export default function AdminPharmaciesPage() {
     phone_number: '',
     virtual_key: '',
   });
+
+  // Fonction pour réinitialiser le formulaire avec un nouveau mot de passe
+  const resetFormWithNewPassword = () => {
+    setFormData({
+      email: '',
+      password: generateSecurePassword(),
+      full_name: '',
+      pharmacy_name: '',
+      pharmacy_address: '',
+      code_ps: '',
+      phone_number: '',
+      virtual_key: '',
+    });
+  };
+  
+  // Générer un mot de passe sécurisé au chargement du formulaire
+  useEffect(() => {
+    if (showCreateForm) {
+      setFormData(prev => ({
+        ...prev,
+        password: generateSecurePassword()
+      }));
+    }
+  }, [showCreateForm]);
 
   // États pour l'édition de pharmacie
   const [showEditForm, setShowEditForm] = useState(false);
@@ -70,6 +101,31 @@ export default function AdminPharmaciesPage() {
     const timestamp = Math.floor(Date.now() / 1000);
     const randomSuffix = Math.random().toString(36).substring(2, 8);
     return `sk-${codePs}-${timestamp}-${randomSuffix}`;
+  };
+
+  // Fonction pour générer un mot de passe sécurisé conforme aux exigences Supabase
+  const generateSecurePassword = (): string => {
+    // Supabase exige : au moins 6 caractères, avec majuscules, minuscules, chiffres et caractères spéciaux
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
+    const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    
+    // Garantir au moins un caractère de chaque type
+    let password = '';
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+    
+    // Compléter avec des caractères aléatoires pour atteindre 12 caractères
+    const allChars = lowercase + uppercase + numbers + symbols;
+    for (let i = password.length; i < 12; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    // Mélanger les caractères pour éviter un pattern prévisible
+    return password.split('').sort(() => Math.random() - 0.5).join('');
   };
 
   // Fonction pour auto-générer la clé virtuelle basée sur le code PS
@@ -180,28 +236,26 @@ export default function AdminPharmaciesPage() {
       }
 
       const result = await response.json();
+      
+      console.log('[AdminPharmacies] Creation result:', result);
+      
+      // Afficher le message de succès
       toast.success(result.message);
-      // Afficher le mot de passe temporaire s'il est retourné
-      if (result.temp_password) {
-        toast(
-          <div>
-            <div className="font-semibold mb-1">Mot de passe temporaire généré :</div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono bg-gray-100 px-2 py-1 rounded text-sm select-all">{result.temp_password}</span>
-              <button
-                className="ml-2 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                onClick={() => {
-                  navigator.clipboard.writeText(result.temp_password);
-                  toast.success('Mot de passe copié !');
-                }}
-              >
-                Copier
-              </button>
-            </div>
-            <div className="text-xs text-gray-500 mt-1">Transmettez ce mot de passe à la pharmacie. Il pourra être changé après connexion.</div>
-          </div>,
-          { duration: 15000 }
-        );
+      
+      // Afficher le modal avec les informations de connexion
+      if (result.temp_password && result.pharmacy) {
+        console.log('[AdminPharmacies] Displaying credentials modal:', result.temp_password);
+        
+        setNewPharmacyCredentials({
+          pharmacy_name: result.pharmacy.pharmacy_name,
+          email: result.pharmacy.email,
+          temp_password: result.temp_password,
+          code_ps: result.pharmacy.code_ps
+        });
+        setShowCredentialsModal(true);
+      } else {
+        console.warn('[AdminPharmacies] No temp_password in result:', result);
+        toast.error('Attention: Aucun mot de passe temporaire généré. Vérifiez la création.');
       }
       // Réinitialiser le formulaire
       setFormData({
@@ -346,21 +400,22 @@ export default function AdminPharmaciesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Gestion des Pharmacies</h1>
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-500">
-            {pharmacies.length} pharmacie(s) au total
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <h1 className="text-2xl font-bold text-gray-900">Gestion des Pharmacies</h1>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <div className="text-sm text-gray-500">
+              {pharmacies.length} pharmacie(s) au total
+            </div>
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap"
+            >
+              Ajouter Pharmacie
+            </button>
           </div>
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Ajouter Pharmacie
-          </button>
         </div>
-      </div>
 
       {/* Formulaire de création */}
       {showCreateForm && (
@@ -385,13 +440,51 @@ export default function AdminPharmaciesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Mot de passe *
                   </label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono bg-yellow-50"
+                      placeholder="Mot de passe sécurisé"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData({...formData, password: generateSecurePassword()})}
+                      className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+                    >
+                      Générer
+                    </button>
+                    {formData.password && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(formData.password);
+                          toast.success('Mot de passe copié !');
+                        }}
+                        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                      >
+                        Copier
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Le mot de passe doit contenir au moins 6 caractères avec majuscules, minuscules, chiffres et symboles
+                  </p>
+                  {formData.password && (
+                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                      <div className="flex justify-between items-center mb-2">
+                        <div>
+                          <strong>⚠️ Important :</strong> Notez ce mot de passe pour le communiquer à la pharmacie.
+                          Il pourra être changé après la première connexion.
+                        </div>
+                        {formData.email && formData.password && (
+                          <TestLoginButton email={formData.email} password={formData.password} />
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -610,8 +703,9 @@ export default function AdminPharmaciesPage() {
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Version desktop du tableau */}
+      <div className="hidden lg:block bg-white shadow rounded-lg overflow-hidden">
+        <div className="overflow-x-auto scrollbar-stable">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -725,6 +819,118 @@ export default function AdminPharmaciesPage() {
           )}
         </div>
       </div>
-    </div>
+
+      {/* Version mobile du tableau - cartes */}
+      <div className="lg:hidden space-y-4">
+        {pharmacies.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow">
+            <div className="text-gray-500">Aucune pharmacie trouvée</div>
+          </div>
+        ) : (
+          pharmacies.map((pharmacy) => (
+            <div key={pharmacy.id} className="bg-white rounded-lg shadow overflow-hidden">
+              {/* En-tête de la carte */}
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                <div>
+                  <div className="font-medium text-gray-900">
+                    {pharmacy.pharmacy_name || 'Non renseigné'}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {pharmacy.full_name || 'Non renseigné'}
+                  </div>
+                </div>
+                <div>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(pharmacy.pharmacy_status)}`}>
+                    {getStatusText(pharmacy.pharmacy_status)}
+                  </span>
+                  {pharmacy.is_admin && (
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      Admin
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Contenu de la carte */}
+              <div className="p-4 space-y-3">
+                <div className="flex justify-between">
+                  <div className="text-sm font-medium text-gray-500">Email</div>
+                  <div className="text-sm text-gray-900">{pharmacy.email}</div>
+                </div>
+                
+                <div className="flex justify-between">
+                  <div className="text-sm font-medium text-gray-500">Code PS</div>
+                  <div className="text-sm text-gray-900">{pharmacy.code_ps || 'Non renseigné'}</div>
+                </div>
+                
+                <div className="flex justify-between">
+                  <div className="text-sm font-medium text-gray-500">Téléphone</div>
+                  <div className="text-sm text-gray-900">{pharmacy.phone_number || 'Non renseigné'}</div>
+                </div>
+                
+                <div className="flex justify-between">
+                  <div className="text-sm font-medium text-gray-500">Date d'inscription</div>
+                  <div className="text-sm text-gray-900">
+                    {new Date(pharmacy.created_at).toLocaleDateString('fr-FR')}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Actions */}
+              {!pharmacy.is_admin && (
+                <div className="px-4 py-3 bg-gray-50 flex flex-wrap gap-2 justify-end">
+                  <button
+                    onClick={() => handleEditPharmacy(pharmacy)}
+                    className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-xs font-medium hover:bg-gray-300"
+                  >
+                    Modifier
+                  </button>
+                  
+                  {pharmacy.pharmacy_status !== 'active' && (
+                    <button
+                      className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
+                      disabled={actionLoading === pharmacy.id + 'active'}
+                      onClick={() => handleStatusChange(pharmacy.id, 'active')}
+                    >
+                      {actionLoading === pharmacy.id + 'active' ? '...' : 'Activer'}
+                    </button>
+                  )}
+                  
+                  {pharmacy.pharmacy_status !== 'suspended' && (
+                    <button
+                      className="px-3 py-1 bg-yellow-500 text-white rounded text-xs font-medium hover:bg-yellow-600"
+                      disabled={actionLoading === pharmacy.id + 'suspended'}
+                      onClick={() => handleStatusChange(pharmacy.id, 'suspended')}
+                    >
+                      {actionLoading === pharmacy.id + 'suspended' ? '...' : 'Suspendre'}
+                    </button>
+                  )}
+                  
+                  {pharmacy.pharmacy_status !== 'rejected' && (
+                    <button
+                      className="px-3 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700"
+                      disabled={actionLoading === pharmacy.id + 'rejected'}
+                      onClick={() => handleStatusChange(pharmacy.id, 'rejected')}
+                    >
+                      {actionLoading === pharmacy.id + 'rejected' ? '...' : 'Rejeter'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+      
+      {/* Modal des informations de connexion */}
+      {showCredentialsModal && newPharmacyCredentials && (
+        <PharmacyCredentialsModal
+          isOpen={showCredentialsModal}
+          onClose={() => setShowCredentialsModal(false)}
+          pharmacyData={newPharmacyCredentials}
+        />
+      )}
+      </div>
+    </AdminLayout>
   );
 } 

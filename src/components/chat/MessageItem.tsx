@@ -62,19 +62,11 @@ const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-              // Personnaliser le rendu des éléments Markdown si nécessaire
-              // Par exemple, pour les tableaux, les rendre plus jolis
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              table: ({ node, children, ...props }) => <table className="min-w-full divide-y divide-gray-300 border border-gray-200 my-2" {...props}>{children}</table>,
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              thead: ({ node, children, ...props }) => <thead className="bg-gray-50" {...props}>{children}</thead>,
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              th: ({ node, children, ...props }) => <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" {...props}>{children}</th>,
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              td: ({ node, children, ...props }) => <td className="px-3 py-2 text-sm text-gray-700 border-t border-gray-200" {...props}>{children}</td>,
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              table: ({ node, children, ...props }) => <table className="min-w-full divide-y divide-border border border-border my-2" {...props}>{children}</table>,
+              thead: ({ node, children, ...props }) => <thead className="bg-muted" {...props}>{children}</thead>,
+              th: ({ node, children, ...props }) => <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider" {...props}>{children}</th>,
+              td: ({ node, children, ...props }) => <td className="px-3 py-2 text-sm text-foreground border-t border-border" {...props}>{children}</td>,
               p: ({ node, children, ...props }) => <p className="mb-1 last:mb-0" {...props}>{children}</p>,
-              // Vous pouvez ajouter d'autres personnalisations pour les listes, les liens, etc.
             }}
           >
             {message.content}

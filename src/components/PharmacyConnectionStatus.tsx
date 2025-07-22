@@ -26,21 +26,61 @@ export default function PharmacyConnectionStatus() {
       setStatus('loading');
       setError(null);
       try {
-        const res = await fetch(healthUrl, { method: 'GET', cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        if (data.status === 'healthy') {
-          if (!stopped) setStatus('connected');
-        } else {
-          if (!stopped) {
-            setStatus('disconnected');
-            setError('Service non healthy');
+        // Test 1: Vérifier que l'API répond
+        const healthRes = await fetch(healthUrl, { 
+          method: 'GET', 
+          cache: 'no-store',
+          signal: AbortSignal.timeout(5000)
+        });
+        
+        if (!healthRes.ok) {
+          throw new Error(`API non accessible (${healthRes.status})`);
+        }
+
+        // Test 2: Tester la base de données avec une requête simple
+        const dbTestRes = await fetch(`http://ps${codePs}.frp.youcef.xyz/execute_query`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: 'SELECT 1;',
+            db_id: codePs
+          }),
+          signal: AbortSignal.timeout(8000)
+        });
+
+        if (!dbTestRes.ok) {
+          throw new Error(`Test DB échoué (${dbTestRes.status})`);
+        }
+
+        const dbResult = await dbTestRes.json();
+        
+        if (dbResult.error) {
+          if (dbResult.error.includes('generator didn\'t yield')) {
+            throw new Error('PostgreSQL non démarré');
+          } else {
+            throw new Error(`Erreur DB: ${dbResult.error}`);
           }
         }
+
+        // Si tout est OK
+        if (!stopped) {
+          setStatus('connected');
+          setError(null);
+        }
+        
       } catch (e: any) {
         if (!stopped) {
           setStatus('disconnected');
-          setError('Erreur de connexion au service local');
+          
+          if (e.name === 'AbortError') {
+            setError('Timeout');
+          } else if (e.message.includes('PostgreSQL non démarré')) {
+            setError('DB arrêtée');
+          } else {
+            setError(e.message || 'Erreur connexion');
+          }
         }
       }
     };

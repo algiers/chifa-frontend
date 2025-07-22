@@ -55,11 +55,11 @@ const SQLExecutionDisplay: React.FC<SQLExecutionDisplayProps> = ({ sqlResults })
   }
 
   return (
-    <div className="mt-3 pt-3 border-t border-gray-200">
+    <div className="mt-3 pt-3 border-t border-border">
       <h4 className="text-sm font-semibold mb-2 text-gray-700">Résultats de la requête :</h4>
-      <div className="overflow-x-auto rounded-md border border-gray-200 bg-white">
+      <div className="overflow-x-auto rounded-md border border-border bg-card">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-muted">
             <tr>
               {headers.map((header) => (
                 <th 
@@ -76,9 +76,9 @@ const SQLExecutionDisplay: React.FC<SQLExecutionDisplayProps> = ({ sqlResults })
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-border">
             {(sortedResults || sqlResults).map((row, rowIndex) => (
-              <tr key={rowIndex} className={rowIndex % 2 === 0 ? undefined : 'bg-gray-50'}>
+              <tr key={rowIndex} className={rowIndex % 2 === 0 ? undefined : 'bg-muted/50'}>
                 {headers.map((header) => (
                   <td key={`${rowIndex}-${header}`} className="px-3 py-2 whitespace-nowrap text-gray-700">
                     {typeof row[header] === 'object' ? JSON.stringify(row[header]) : String(row[header] ?? '')}

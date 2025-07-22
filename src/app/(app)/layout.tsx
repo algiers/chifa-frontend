@@ -3,8 +3,6 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
-import Navbar from '@/components/layout/Navbar'; // À créer
-import Sidebar from '@/components/layout/Sidebar'; // À créer
 
 export default function AppLayout({
   children,
@@ -34,14 +32,10 @@ export default function AppLayout({
   // }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Navbar />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
-          {children}
-        </main>
-      </div>
+    <div className="h-screen w-full bg-background">
+      <main className="flex-1 w-full min-h-screen bg-background">
+        {children}
+      </main>
     </div>
   );
 }

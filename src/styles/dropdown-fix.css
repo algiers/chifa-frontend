@@ -1,0 +1,15 @@
+/* Styles pour corriger le positionnement du dropdown */
+[data-radix-popper-content-wrapper] {
+  transform: none !important;
+  right: 16px !important;
+  left: auto !important;
+  top: 64px !important;
+  position: absolute !important;
+  z-index: 9999 !important;
+}
+
+/* Assurer que le dropdown est visible */
+.radix-dropdown-content {
+  opacity: 1 !important;
+  visibility: visible !important;
+}

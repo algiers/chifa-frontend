@@ -18,7 +18,7 @@ export default function MessageList() {
   }, [messages, isLoading]); // Défiler quand de nouveaux messages arrivent ou quand le chargement change
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 rounded-t-lg">
+    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background rounded-t-lg">
       {messages.map((msg) => (
         <MessageItem key={msg.id} message={msg} />
       ))}
@@ -26,10 +26,10 @@ export default function MessageList() {
         // Afficher un skeleton seulement si le dernier message est de l'utilisateur et qu'on attend une réponse
         <div className="flex my-3 justify-start">
           <div className="flex items-start space-x-3 max-w-[85%] sm:max-w-[75%]">
-            <Skeleton className="w-8 h-8 rounded-full bg-gray-300" />
-            <div className="p-3 rounded-lg shadow-sm bg-gray-100 w-48">
-              <Skeleton className="h-4 w-3/4 bg-gray-300 mb-2" />
-              <Skeleton className="h-4 w-1/2 bg-gray-300" />
+            <Skeleton className="w-8 h-8 rounded-full bg-muted" />
+            <div className="p-3 rounded-lg shadow-sm bg-card w-48">
+              <Skeleton className="h-4 w-3/4 bg-muted mb-2" />
+              <Skeleton className="h-4 w-1/2 bg-muted" />
             </div>
           </div>
         </div>

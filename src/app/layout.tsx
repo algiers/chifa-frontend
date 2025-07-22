@@ -1,6 +1,8 @@
 'use client';
 
 import "./globals.css";
+import "../styles/admin-scrollbar.css";
+import "../styles/dropdown-fix.css";
 import React, { useEffect, useState } from "react";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { SupabaseProvider } from '@/contexts/SupabaseContext';

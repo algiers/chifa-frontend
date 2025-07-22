@@ -109,7 +109,7 @@ export const getLangGraphConfig = () => {
 export const getLangGraphEndpoints = () => {
   const baseUrl = SERVICES_CONFIG.LANGGRAPH.BASE_URL;
   const port = SERVICES_CONFIG.LANGGRAPH.PORT;
-  const baseUrlWithPort = `${baseUrl}:${port}`;
+  const baseUrlWithPort = buildUrl(baseUrl, port, 'http');
   
   return {
     agentInvoke: `${baseUrlWithPort}/api/v1/agent/invoke`,

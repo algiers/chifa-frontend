@@ -2,17 +2,14 @@
 
 import React, { useEffect, Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import ChatInput from '@/components/chat/ChatInput';
-import MessageList from '@/components/chat/MessageList';
+import ChatLayout from '@/components/chat/ChatLayout';
 import { useAuthStore } from '@/stores/authStore';
-import { useChatStore, ChatMessage } from '@/stores/chatStore';
+import { useChatStore } from '@/stores/chatStore';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import PharmacyConnectionStatus from '@/components/PharmacyConnectionStatus';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { AlertCircle, ArrowLeft, Loader2, MessageSquare, Activity, Settings, RefreshCw } from 'lucide-react';
+import { AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 
 function DashboardContent() {
   const user = useAuthStore((s) => s.user);
@@ -26,26 +23,28 @@ function DashboardContent() {
   const isAuthReady = useAuthStore((s) => s.isAuthReady);
   const isAdmin = useAuthStore((s) => s.isAdmin);
 
-  // Clear error if user is properly loaded and profile exists
-  useEffect(() => {
-    if (user && codePs && pharmacyStatus === 'active' && authError) {
-      console.log('[Dashboard] Clearing stale error - user and profile are loaded successfully');
-      setError(null);
-    }
-  }, [user, codePs, pharmacyStatus, authError, setError]);
-
-  // Debug logs pour comprendre l'état du profil
-  console.log('[Dashboard] Debug - User:', user?.id, 'PharmacyStatus:', pharmacyStatus, 'CodePs:', codePs, 'Error:', authError);
-  const { setMessages, setCurrentConversationId, clearChat, setLoading: setChatLoading, setError: setChatError } = useChatStore();
+  const { 
+    setMessages, 
+    setCurrentConversationId, 
+    clearChat, 
+    setLoading: setChatLoading, 
+    setError: setChatError,
+    currentConversationId
+  } = useChatStore();
+  
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createSupabaseBrowserClient();
   const [retryLoading, setRetryLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Définir l'URL du service local (à adapter selon l'environnement)
-  const LOCAL_API_URL = process.env.NEXT_PUBLIC_LOCAL_API_URL || 'http://localhost:8002';
+  // Clear error if user is properly loaded and profile exists
+  useEffect(() => {
+    if (user && codePs && pharmacyStatus === 'active' && authError) {
+      setError(null);
+    }
+  }, [user, codePs, pharmacyStatus, authError, setError]);
 
-  // Fonction pour réessayer de charger le profil
   const handleRetryProfile = async () => {
     if (!user) return;
     setRetryLoading(true);
@@ -55,6 +54,7 @@ function DashboardContent() {
         .select('*')
         .eq('id', user.id)
         .single();
+      
       if (profileError && profileError.code !== 'PGRST116') {
         setError(new Error(profileError.message || 'Erreur lors de la récupération du profil utilisateur/pharmacie.'));
         setProfileDetails(null);
@@ -73,35 +73,10 @@ function DashboardContent() {
     }
   };
 
-  // Fonction de debug pour afficher les détails du profil
-  const debugProfile = async () => {
-    if (!user) return;
-    try {
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      console.log('[Dashboard] Full profile data:', profileData);
-      console.log('[Dashboard] Profile error:', profileError);
-      
-      if (profileData) {
-        alert(`Profil trouvé:\n- ID: ${profileData.id}\n- Status: ${profileData.pharmacy_status}\n- Code PS: ${profileData.code_ps || 'NON DÉFINI'}\n- Plan: ${profileData.current_plan_id}\n- Crédits: ${profileData.demo_credits_remaining}`);
-      } else {
-        alert('Aucun profil trouvé');
-      }
-    } catch (error) {
-      console.error('[Dashboard] Debug error:', error);
-      alert('Erreur lors du debug: ' + error);
-    }
-  };
-
   useEffect(() => {
     const conversationIdFromUrl = searchParams.get('conversation_id');
 
     const loadConversation = async (conversationId: string) => {
-      // Always clear chat before loading a new conversation
       clearChat();
       setChatLoading(true);
       setChatError(null);
@@ -117,8 +92,7 @@ function DashboardContent() {
         }
 
         if (data && data.length > 0) {
-          // Transformer les données récupérées en ChatMessage[]
-          const fetchedMessages: ChatMessage[] = data.map((msg: any) => ({
+          const fetchedMessages = data.map((msg: any) => ({
             id: msg.id,
             role: msg.role,
             content: msg.content,
@@ -136,11 +110,9 @@ function DashboardContent() {
         }
       } catch (err: any) {
         console.error('Failed to load conversation:', err);
-        setChatError('Erreur lors du chargement de la conversation. La conversation est introuvable ou vous n\'y avez pas accès.');
+        setChatError('Erreur lors du chargement de la conversation.');
         clearChat();
         setCurrentConversationId(null);
-        // Optionnel: rediriger ou afficher un message si la conversation n'est pas trouvée
-        // router.replace('/dashboard');
       } finally {
         setChatLoading(false);
       }
@@ -149,12 +121,10 @@ function DashboardContent() {
     if (conversationIdFromUrl) {
       loadConversation(conversationIdFromUrl);
     } else {
-      // Always clear chat state when starting a new chat
       clearChat();
       setCurrentConversationId(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]); // Dépendance à searchParams pour réagir aux changements d'URL
+  }, [searchParams, clearChat, setChatLoading, setChatError, setMessages, setCurrentConversationId]);
 
   useEffect(() => {
     if (isAuthReady && isAdmin) {
@@ -166,7 +136,6 @@ function DashboardContent() {
   }, [isAuthReady, isAdmin, user, router]);
 
   useEffect(() => {
-    // Redirection si l'utilisateur n'est pas censé être ici
     if (!user) {
       router.push('/login?redirectTo=/dashboard');
       return;
@@ -175,19 +144,34 @@ function DashboardContent() {
       router.push('/complete-pharmacy-profile');
       return;
     }
-    if (pharmacyStatus === 'pending_payment_approval') {
-      // Peut-être rediriger vers une page d'attente ou afficher un message ici
-      // Pour l'instant, on le laisse accéder mais ChatInput sera désactivé.
-    }
     if (pharmacyStatus === 'demo_credits_exhausted') {
       router.push('/pricing?reason=credits_exhausted');
       return;
     }
-    // Autres statuts comme 'suspended', 'rejected' pourraient aussi rediriger.
   }, [user, pharmacyStatus, router]);
 
-  // Afficher un message d'erreur explicite si le profil ne se charge pas
-  // Vérifier que l'erreur n'est pas un objet vide et qu'elle a un contenu utile
+  const handleNewChat = () => {
+    clearChat();
+    setCurrentConversationId(null);
+    // Remove conversation_id from URL
+    const url = new URL(window.location.href);
+    url.searchParams.delete('conversation_id');
+    window.history.replaceState({}, '', url.toString());
+  };
+
+  const handleConversationSelect = (conversationId: string | null) => {
+    setCurrentConversationId(conversationId);
+    if (conversationId) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('conversation_id', conversationId);
+      window.history.replaceState({}, '', url.toString());
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('conversation_id');
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
   const hasRealError = authError && (
     typeof authError === 'string' ||
     (typeof authError === 'object' && authError !== null && (
@@ -199,14 +183,6 @@ function DashboardContent() {
   );
   
   if (hasRealError) {
-    console.debug('[Dashboard] authError:', authError);
-    let errorMsg = '';
-    if (typeof authError === 'string') errorMsg = authError;
-    else if (authError.message) errorMsg = authError.message;
-    else if (typeof authError === 'object' && 'code' in authError) errorMsg = `Code: ${(authError as any).code}`;
-    else if (typeof authError === 'object' && 'status' in authError) errorMsg = `Status: ${(authError as any).status}`;
-    else errorMsg = JSON.stringify(authError);
-    
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
         <Card className="border-0 shadow-xl max-w-md w-full">
@@ -216,7 +192,7 @@ function DashboardContent() {
             </div>
             <CardTitle className="text-xl font-bold">Erreur de profil</CardTitle>
             <CardDescription>
-              {errorMsg || 'Erreur inconnue lors du chargement de votre profil'}
+              {typeof authError === 'string' ? authError : authError.message || 'Erreur inconnue'}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
@@ -237,18 +213,12 @@ function DashboardContent() {
                 </>
               )}
             </Button>
-            <Button
-              onClick={debugProfile}
-              variant="outline"
-              className="w-full border-green-600 text-green-600 hover:bg-green-50"
-            >
-              Debug Profil
-            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
+
   if (!user) {
     if (authLoading) {
       return (
@@ -280,26 +250,6 @@ function DashboardContent() {
     );
   }
 
-  if (pharmacyStatus === 'active' || pharmacyStatus === 'active_demo') {
-    if (!codePs) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
-          <Card className="border-0 shadow-xl max-w-md w-full">
-            <CardHeader className="text-center">
-              <CardTitle>Configuration incomplète</CardTitle>
-              <CardDescription>Votre code pharmacie est manquant</CardDescription>
-            </CardHeader>
-            <CardContent className="text-center">
-              <Button asChild className="w-full bg-green-600 hover:bg-green-700">
-                <a href="/complete-pharmacy-profile">Compléter le profil</a>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-  }
-
   if (pharmacyStatus === 'not_registered' || pharmacyStatus === 'pending_pharmacy_details') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
@@ -317,73 +267,10 @@ function DashboardContent() {
       </div>
     );
   }
-  
-  const canChat = pharmacyStatus === 'active' || (pharmacyStatus === 'active_demo' && demoCreditsRemaining > 0);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header with modern design */}
-      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="icon" asChild>
-                <a href="/">
-                  <ArrowLeft className="h-4 w-4" />
-                </a>
-              </Button>
-              <div>
-                <h1 className="text-xl font-semibold flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-green-600" />
-                  Chat Chifa.ai
-                </h1>
-                {pharmacyStatus === 'active_demo' && (
-                  <Badge variant="secondary" className="text-xs mt-1">
-                    Démo - {demoCreditsRemaining} crédits restants
-                  </Badge>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <PharmacyConnectionStatus />
-              <ThemeToggle />
-              <Button variant="ghost" size="icon" asChild>
-                <a href="/settings">
-                  <Settings className="h-4 w-4" />
-                </a>
-              </Button>
-            </div>
-          </div>
-          
-          {pharmacyStatus === 'pending_payment_approval' && (
-            <div className="mt-3">
-              <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm">
-                    Votre compte est en attente d'approbation de paiement. Certaines fonctionnalités peuvent être limitées.
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
-      
-      {/* Main chat area */}
-      <div className="container mx-auto px-4 py-6 h-[calc(100vh-120px)] flex flex-col">
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto">
-            <MessageList />
-          </div>
-        </div>
-
-        {/* Chat input */}
-        <div className="mt-4">
-          <ChatInput />
-        </div>
-      </div>
+    <div className="h-screen flex flex-col bg-background">
+      <ChatLayout />
     </div>
   );
 }

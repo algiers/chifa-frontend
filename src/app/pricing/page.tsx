@@ -1,12 +1,7 @@
 "use client";
+
 import { Header } from "@/components/sections/Header"
-// Update the path below if the Footer component is located elsewhere
-// import { Footer } from "@/components/Footer"
 import { Footer } from "@/components/sections/Footer"
-// Or update the path above to the correct location of your Footer component
-// or, for example:
-// import { Footer } from "@/components/layout/Footer"
-// Make sure this path matches the actual location of Footer.tsx or Footer/index.tsx
 import { Pricing } from "@/components/sections/Pricing"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
