@@ -1,0 +1,361 @@
+/* Styles spécifiques pour le dashboard admin */
+
+/* Correction des problèmes d'affichage du tableau */
+.admin-table-container {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.4) rgba(243, 244, 246, 0.5);
+}
+
+.admin-table-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.admin-table-container::-webkit-scrollbar-track {
+  background: rgba(243, 244, 246, 0.5);
+  border-radius: 4px;
+}
+
+.admin-table-container::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.4);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.admin-table-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.6);
+}
+
+/* Assurer que le tableau prend toute la largeur disponible */
+.admin-table {
+  width: 100%;
+  min-width: 1200px;
+  table-layout: fixed;
+}
+
+/* Largeurs fixes pour les colonnes */
+.admin-table th:nth-child(1),
+.admin-table td:nth-child(1) {
+  width: 20%;
+}
+
+.admin-table th:nth-child(2),
+.admin-table td:nth-child(2) {
+  width: 20%;
+}
+
+.admin-table th:nth-child(3),
+.admin-table td:nth-child(3) {
+  width: 12%;
+}
+
+.admin-table th:nth-child(4),
+.admin-table td:nth-child(4) {
+  width: 12%;
+}
+
+.admin-table th:nth-child(5),
+.admin-table td:nth-child(5) {
+  width: 16%;
+}
+
+.admin-table th:nth-child(6),
+.admin-table td:nth-child(6) {
+  width: 20%;
+  min-width: 200px;
+}
+
+/* Styles pour les boutons d'action */
+.action-buttons-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+}
+
+.action-buttons-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.action-button {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Couleurs des boutons d'action */
+.action-button-edit {
+  background-color: rgb(75, 85, 99);
+  color: white;
+}
+
+.action-button-edit:hover:not(:disabled) {
+  background-color: rgb(55, 65, 81);
+}
+
+.action-button-approve {
+  background-color: rgb(34, 197, 94);
+  color: white;
+}
+
+.action-button-approve:hover:not(:disabled) {
+  background-color: rgb(22, 163, 74);
+}
+
+.action-button-suspend {
+  background-color: rgb(234, 179, 8);
+  color: white;
+}
+
+.action-button-suspend:hover:not(:disabled) {
+  background-color: rgb(202, 138, 4);
+}
+
+.action-button-reject {
+  background-color: rgb(239, 68, 68);
+  color: white;
+}
+
+.action-button-reject:hover:not(:disabled) {
+  background-color: rgb(220, 38, 38);
+}
+
+/* Assurer que les éléments ne débordent pas */
+.admin-page-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Amélioration de la lisibilité sur petits écrans */
+@media (max-width: 1024px) {
+  .admin-table {
+    min-width: 1000px;
+  }
+  
+  .admin-table th,
+  .admin-table td {
+    padding: 8px 6px;
+    font-size: 13px;
+  }
+  
+  .action-buttons-container {
+    min-width: 160px;
+  }
+}
+
+/* Correction pour les écrans avec zoom */
+@media screen and (min-width: 1024px) {
+  .admin-table-container {
+    min-width: 1200px;
+  }
+  
+  .action-buttons-container {
+    min-width: 200px;
+    max-width: 220px;
+  }
+}
+
+/* Correction pour les écrans plus petits */
+@media screen and (max-width: 1400px) {
+  .admin-table {
+    min-width: 1100px;
+  }
+  
+  .admin-table th,
+  .admin-table td {
+    padding: 6px 8px;
+  }
+  
+  .action-buttons-container {
+    min-width: 180px;
+  }
+  
+  .action-button {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+}
+/* Sty
+les pour les modals avec scroll correct */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  overflow-y: auto;
+}
+
+.modal-container {
+  display: flex;
+  min-height: 100%;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 8px;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .modal-container {
+    align-items: center;
+    padding: 16px;
+  }
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 8px;
+  padding: 16px;
+  width: 100%;
+  max-width: 95vw;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(229, 231, 235, 1);
+  transform: translateY(0);
+  transition: all 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .modal-content {
+    max-width: 672px;
+    padding: 24px;
+  }
+}
+
+/* Assurer que les formulaires dans les modals ont un espacement correct */
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .modal-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.modal-form-full-width {
+  grid-column: 1 / -1;
+}
+
+.modal-form-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+@media (min-width: 640px) {
+  .modal-form-buttons {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+  
+  .modal-form-buttons button:first-child {
+    order: 2;
+  }
+  
+  .modal-form-buttons button:last-child {
+    order: 1;
+  }
+}
+
+/* Styles pour les champs de formulaire */
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgb(55, 65, 81);
+  margin-bottom: 4px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid rgb(209, 213, 219);
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: rgb(59, 130, 246);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid rgb(209, 213, 219);
+  border-radius: 6px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 80px;
+  transition: all 0.2s ease;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: rgb(59, 130, 246);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Styles pour les boutons de formulaire */
+.form-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.form-button-primary {
+  background-color: rgb(37, 99, 235);
+  color: white;
+}
+
+.form-button-primary:hover:not(:disabled) {
+  background-color: rgb(29, 78, 216);
+}
+
+.form-button-secondary {
+  background-color: white;
+  color: rgb(75, 85, 99);
+  border: 1px solid rgb(209, 213, 219);
+}
+
+.form-button-secondary:hover:not(:disabled) {
+  background-color: rgb(249, 250, 251);
+}
+
+.form-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

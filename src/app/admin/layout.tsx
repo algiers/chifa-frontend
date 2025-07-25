@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function AdminLayout({
   children,
@@ -14,7 +14,7 @@ export default function AdminLayout({
 
   useEffect(() => {
     if (isAuthReady && !isAdmin) {
-      router.push('/dashboard');
+      router.push('/login');
     }
   }, [isAuthReady, isAdmin, router]);
 

@@ -1,18 +1,19 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { createSupabaseBrowserClient } from '../../../lib/supabase/client';
 import { toast } from 'sonner';
-import PharmacyCredentialsModal from '@/components/admin/PharmacyCredentialsModal';
-import TestLoginButton from '@/components/admin/TestLoginButton';
-import AdminLayout from '@/components/admin/AdminLayout';
+import PharmacyCredentialsModal from '../../../components/admin/PharmacyCredentialsModal';
+import TestLoginButton from '../../../components/admin/TestLoginButton';
+import AdminLayout from '../../../components/admin/AdminLayout';
+import '../../../styles/admin-dashboard.css';
 
 interface Pharmacy {
   id: string;
   pharmacy_name: string;
   code_ps: string;
   email: string;
-  pharmacy_status: 'pending' | 'active' | 'suspended' | 'rejected';
+  pharmacy_status: 'pending_approval' | 'active' | 'suspended' | 'rejected' | 'active_demo' | 'pending_payment_approval' | 'demo_credits_exhausted' | 'not_registered' | 'pending_pharmacy_details';
   created_at: string;
   is_admin: boolean;
   full_name?: string;
@@ -82,7 +83,8 @@ export default function AdminPharmaciesPage() {
   
   // Générer un mot de passe sécurisé au chargement du formulaire
   useEffect(() => {
-    if (showCreateForm) {
+    if (showCreateForm && !formData.password) {
+      console.log('[useEffect] Generating new password for create form');
       setFormData(prev => ({
         ...prev,
         password: generateSecurePassword()
@@ -213,39 +215,71 @@ export default function AdminPharmaciesPage() {
     e.preventDefault();
     setCreateLoading(true);
 
+    console.log('[handleCreatePharmacy] Starting creation with data:', {
+      ...formData,
+      password: formData.password ? `[${formData.password.length} chars]` : 'EMPTY'
+    });
+
     try {
+      console.log('[handleCreatePharmacy] TRY block start');
       const supabase = createSupabaseBrowserClient();
       const { data: { session } } = await supabase.auth.getSession();
-      
+      console.log('[handleCreatePharmacy] Session check:', {
+        sessionExists: !!session,
+        tokenLength: session?.access_token?.length || 0,
+        userId: session?.user?.id || 'No user',
+        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'No expiry'
+      });
       if (!session) {
         throw new Error('Non authentifié');
       }
-
-      const response = await fetch('/api/admin/pharmacies', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
+      console.log('[handleCreatePharmacy] Sending request to API...');
+      const baseUrl = window.location.origin;
+      const apiUrl = `${baseUrl}/api/admin/pharmacies`;
+      console.log('[handleCreatePharmacy] API URL:', apiUrl);
+      // Timeout de 15s pour le fetch
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      let response;
+      try {
+        console.log('[handleCreatePharmacy] About to send fetch POST to API...');
+        toast.info('Envoi de la requête de création à l’API...');
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+          signal: controller.signal
+        });
+        console.log('[handleCreatePharmacy] Fetch POST terminé, status:', response.status);
+        toast.info('Réponse reçue de l’API, status: ' + response.status);
+      } catch (fetchErr) {
+        const err = fetchErr as any;
+        console.error('[handleCreatePharmacy] Fetch error:', err);
+        toast.error('Erreur lors de la requête API: ' + (err?.message || String(err)));
+        if (err?.name === 'AbortError') {
+          toast.error('La requête a expiré (timeout).');
+          throw new Error('Timeout API');
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeout);
+        console.log('[handleCreatePharmacy] FINALLY after fetch POST');
+        toast.info('Bloc finally exécuté après fetch POST');
+      }
+      console.log('[handleCreatePharmacy] Response status:', response.status);
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('[handleCreatePharmacy] Error response:', errorData);
         throw new Error(errorData.error || 'Erreur lors de la création');
       }
-
       const result = await response.json();
-      
       console.log('[AdminPharmacies] Creation result:', result);
-      
-      // Afficher le message de succès
       toast.success(result.message);
-      
-      // Afficher le modal avec les informations de connexion
       if (result.temp_password && result.pharmacy) {
         console.log('[AdminPharmacies] Displaying credentials modal:', result.temp_password);
-        
         setNewPharmacyCredentials({
           pharmacy_name: result.pharmacy.pharmacy_name,
           email: result.pharmacy.email,
@@ -257,7 +291,6 @@ export default function AdminPharmaciesPage() {
         console.warn('[AdminPharmacies] No temp_password in result:', result);
         toast.error('Attention: Aucun mot de passe temporaire généré. Vérifiez la création.');
       }
-      // Réinitialiser le formulaire
       setFormData({
         email: '',
         password: '',
@@ -271,8 +304,10 @@ export default function AdminPharmaciesPage() {
       setShowCreateForm(false);
       await fetchPharmacies();
     } catch (err) {
+      console.error('[handleCreatePharmacy] CATCH block:', err);
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la création');
     } finally {
+      console.log('[handleCreatePharmacy] FINALLY block');
       setCreateLoading(false);
     }
   };
@@ -401,7 +436,7 @@ export default function AdminPharmaciesPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="admin-page-container space-y-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <h1 className="text-2xl font-bold text-gray-900">Gestion des Pharmacies</h1>
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
@@ -419,123 +454,134 @@ export default function AdminPharmaciesPage() {
 
       {/* Formulaire de création */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Créer une nouvelle pharmacie</h2>
-            <form onSubmit={handleCreatePharmacy} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mot de passe *
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={formData.password}
-                      onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono bg-yellow-50"
-                      placeholder="Mot de passe sécurisé"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setFormData({...formData, password: generateSecurePassword()})}
-                      className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
-                    >
-                      Générer
-                    </button>
-                    {formData.password && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(formData.password);
-                          toast.success('Mot de passe copié !');
-                        }}
-                        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                      >
-                        Copier
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Le mot de passe doit contenir au moins 6 caractères avec majuscules, minuscules, chiffres et symboles
-                  </p>
-                  {formData.password && (
-                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                      <div className="flex justify-between items-center mb-2">
-                        <div>
-                          <strong>⚠️ Important :</strong> Notez ce mot de passe pour le communiquer à la pharmacie.
-                          Il pourra être changé après la première connexion.
-                        </div>
-                        {formData.email && formData.password && (
-                          <TestLoginButton email={formData.email} password={formData.password} />
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nom complet *
-                  </label>
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] shadow-xl border border-gray-200">
+            <div className="p-6 overflow-y-auto max-h-[85vh]">
+              <h2 className="text-xl font-bold mb-6 text-center text-gray-800">Créer une nouvelle pharmacie</h2>
+            <form onSubmit={handleCreatePharmacy} className="space-y-6">
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  required
+                />
+              </div>
+
+              {/* Mot de passe */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mot de passe *
+                </label>
+                <div className="flex gap-2">
                   <input
                     type="text"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono bg-yellow-50 transition-all"
+                    placeholder="Mot de passe sécurisé"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, password: generateSecurePassword()})}
+                    className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm whitespace-nowrap"
+                  >
+                    Générer
+                  </button>
+                  {formData.password && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(formData.password);
+                        toast.success('Mot de passe copié !');
+                      }}
+                      className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
+                    >
+                      Copier
+                    </button>
+                  )}
                 </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Le mot de passe doit contenir au moins 6 caractères avec majuscules, minuscules, chiffres et symboles
+                </p>
+                {formData.password && (
+                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <strong>⚠️ Important :</strong> Notez ce mot de passe pour le communiquer à la pharmacie. Il pourra être changé après la première connexion.
+                      </div>
+                      {formData.email && formData.password && (
+                        <TestLoginButton email={formData.email} password={formData.password} />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Nom complet */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom complet *
+                </label>
+                <input
+                  type="text"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  required
+                />
+              </div>
+
+              {/* Code PS et Nom de la pharmacie */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Code PS *
                   </label>
                   <input
                     type="text"
                     value={formData.code_ps}
                     onChange={(e) => handleCodePsChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Nom de la pharmacie *
                   </label>
                   <input
                     type="text"
                     value={formData.pharmacy_name}
                     onChange={(e) => setFormData({...formData, pharmacy_name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone_number}
-                    onChange={(e) => setFormData({...formData, phone_number: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
               </div>
+
+              {/* Téléphone */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Téléphone
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone_number}
+                  onChange={(e) => setFormData({...formData, phone_number: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              {/* Clé virtuelle */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Clé virtuelle *
                 </label>
                 <div className="flex gap-2">
@@ -543,63 +589,70 @@ export default function AdminPharmaciesPage() {
                     type="text"
                     value={formData.virtual_key}
                     onChange={(e) => setFormData({...formData, virtual_key: e.target.value})}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="sk-..."
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setFormData({...formData, virtual_key: generateVirtualKey(formData.code_ps)})}
-                    className="px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                    className="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
                     disabled={!formData.code_ps}
                   >
                     Générer
                   </button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 mt-2">
                   La clé est générée automatiquement quand vous saisissez le Code PS, mais vous pouvez la modifier
                 </p>
               </div>
+
+              {/* Adresse de la pharmacie */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Adresse de la pharmacie *
                 </label>
                 <textarea
                   value={formData.pharmacy_address}
                   onChange={(e) => setFormData({...formData, pharmacy_address: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
                   rows={3}
                   required
                 />
               </div>
-              <div className="flex justify-end gap-2">
+              
+              {/* Boutons d'action */}
+              <div className="flex flex-col sm:flex-row justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 text-gray-600 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 transition-colors font-medium order-2 sm:order-1"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={createLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium order-1 sm:order-2"
                 >
                   {createLoading ? 'Création...' : 'Créer'}
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* Formulaire d'édition */}
       {showEditForm && editData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Modifier la pharmacie</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[85vh] shadow-xl border border-gray-200">
+            <div className="p-6 overflow-y-auto max-h-[80vh]">
+              <h2 className="text-xl font-bold mb-4">Modifier la pharmacie</h2>
             <form onSubmit={handleUpdatePharmacy} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              {/* Première ligne : Email, Nom complet, Code PS */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email
@@ -633,6 +686,10 @@ export default function AdminPharmaciesPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+              </div>
+
+              {/* Deuxième ligne : Nom de la pharmacie, Téléphone */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nom de la pharmacie
@@ -655,19 +712,23 @@ export default function AdminPharmaciesPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Clé virtuelle
-                  </label>
-                  <input
-                    type="text"
-                    value={editData.virtual_key}
-                    onChange={(e) => setEditData({...editData, virtual_key: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="sk-..."
-                  />
-                </div>
               </div>
+
+              {/* Troisième ligne : Clé virtuelle */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Clé virtuelle
+                </label>
+                <input
+                  type="text"
+                  value={editData.virtual_key}
+                  onChange={(e) => setEditData({...editData, virtual_key: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="sk-..."
+                />
+              </div>
+
+              {/* Quatrième ligne : Adresse de la pharmacie */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Adresse de la pharmacie
@@ -679,52 +740,53 @@ export default function AdminPharmaciesPage() {
                   rows={3}
                 />
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 mt-6">
                 <button
                   type="button"
                   onClick={() => {
                     setShowEditForm(false);
                     setEditData(null);
                   }}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 text-gray-600 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 transition-colors font-medium order-2 sm:order-1"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={editLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium order-1 sm:order-2"
                 >
-                  {editLoading ? 'Mise à jour...' : 'Mettre à jour'}
+                  {editLoading ? 'Mise à jour...' : 'Modifier'}
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* Version desktop du tableau */}
       <div className="hidden lg:block bg-white shadow rounded-lg overflow-hidden">
-        <div className="overflow-x-auto scrollbar-stable">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="admin-table-container">
+          <table className="admin-table divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
                   Pharmacie
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
                   Contact
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/8">
                   Code PS
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/8">
                   Statut
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                   Date d'inscription
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4 min-w-[200px]">
                   Actions
                 </th>
               </tr>
@@ -732,76 +794,80 @@ export default function AdminPharmaciesPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {pharmacies.map((pharmacy) => (
                 <tr key={pharmacy.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
+                  <td className="px-4 py-4 w-1/5">
+                    <div className="text-sm font-medium text-gray-900 truncate">
                       {pharmacy.pharmacy_name || 'Non renseigné'}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-500 truncate">
                       {pharmacy.full_name || 'Non renseigné'}
                     </div>
                     {pharmacy.is_admin && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mt-1">
                         Admin
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{pharmacy.email}</div>
-                    <div className="text-sm text-gray-500">{pharmacy.phone_number || 'Non renseigné'}</div>
+                  <td className="px-4 py-4 w-1/5">
+                    <div className="text-sm text-gray-900 truncate">{pharmacy.email}</div>
+                    <div className="text-sm text-gray-500 truncate">{pharmacy.phone_number || 'Non renseigné'}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-4 w-1/8 text-sm text-gray-900">
                     {pharmacy.code_ps || 'Non renseigné'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 w-1/8">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(pharmacy.pharmacy_status)}`}>
                       {getStatusText(pharmacy.pharmacy_status)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-4 py-4 w-1/6 text-sm text-gray-500">
                     {new Date(pharmacy.created_at).toLocaleDateString('fr-FR')}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-4 py-4 w-1/4 min-w-[200px]">
                     {!pharmacy.is_admin ? (
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => handleEditPharmacy(pharmacy)}
-                          className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors"
-                        >
-                          Modifier
-                        </button>
+                      <div className="flex flex-col gap-2 min-w-[180px]">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => handleEditPharmacy(pharmacy)}
+                            className="px-3 py-1 bg-gray-600 text-white rounded text-xs font-medium hover:bg-gray-700 transition-colors"
+                          >
+                            Modifier
+                          </button>
+                          
+                          {/* Bouton Approuver visible si le statut n'est pas déjà 'active' */}
+                          {!['active', 'active_demo'].includes(pharmacy.pharmacy_status) && (
+                            <button
+                              className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                              disabled={actionLoading === pharmacy.id + 'active'}
+                              onClick={() => handleStatusChange(pharmacy.id, 'active')}
+                            >
+                              {actionLoading === pharmacy.id + 'active' ? 'Chargement...' : 'Approuver'}
+                            </button>
+                          )}
+                        </div>
                         
-                        {/* Bouton Approuver visible si le statut n'est pas déjà 'active' */}
-                        {pharmacy.pharmacy_status !== 'active' && (
-                          <button
-                            className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 transition-colors"
-                            disabled={actionLoading === pharmacy.id + 'active'}
-                            onClick={() => handleStatusChange(pharmacy.id, 'active')}
-                          >
-                            {actionLoading === pharmacy.id + 'active' ? 'Chargement...' : 'Approuver'}
-                          </button>
-                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {/* Bouton Suspendre visible si le statut n'est pas déjà 'suspended' */}
+                          {pharmacy.pharmacy_status !== 'suspended' && (
+                            <button
+                              className="px-3 py-1 bg-yellow-500 text-white rounded text-xs font-medium hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                              disabled={actionLoading === pharmacy.id + 'suspended'}
+                              onClick={() => handleStatusChange(pharmacy.id, 'suspended')}
+                            >
+                              {actionLoading === pharmacy.id + 'suspended' ? 'Chargement...' : 'Suspendre'}
+                            </button>
+                          )}
 
-                        {/* Bouton Suspendre visible si le statut n'est pas déjà 'suspended' */}
-                        {pharmacy.pharmacy_status !== 'suspended' && (
-                          <button
-                            className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 disabled:opacity-50 transition-colors"
-                            disabled={actionLoading === pharmacy.id + 'suspended'}
-                            onClick={() => handleStatusChange(pharmacy.id, 'suspended')}
-                          >
-                            {actionLoading === pharmacy.id + 'suspended' ? 'Chargement...' : 'Suspendre'}
-                          </button>
-                        )}
-
-                        {/* Bouton Rejeter visible si le statut n'est pas déjà 'rejected' */}
-                        {pharmacy.pharmacy_status !== 'rejected' && (
-                          <button
-                            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
-                            disabled={actionLoading === pharmacy.id + 'rejected'}
-                            onClick={() => handleStatusChange(pharmacy.id, 'rejected')}
-                          >
-                            {actionLoading === pharmacy.id + 'rejected' ? 'Chargement...' : 'Rejeter'}
-                          </button>
-                        )}
+                          {/* Bouton Rejeter visible si le statut n'est pas déjà 'rejected' */}
+                          {pharmacy.pharmacy_status !== 'rejected' && (
+                            <button
+                              className="px-3 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                              disabled={actionLoading === pharmacy.id + 'rejected'}
+                              onClick={() => handleStatusChange(pharmacy.id, 'rejected')}
+                            >
+                              {actionLoading === pharmacy.id + 'rejected' ? 'Chargement...' : 'Rejeter'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <span className="text-gray-400 text-sm">Compte admin</span>
@@ -886,7 +952,7 @@ export default function AdminPharmaciesPage() {
                     Modifier
                   </button>
                   
-                  {pharmacy.pharmacy_status !== 'active' && (
+                  {!['active', 'active_demo'].includes(pharmacy.pharmacy_status) && (
                     <button
                       className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
                       disabled={actionLoading === pharmacy.id + 'active'}

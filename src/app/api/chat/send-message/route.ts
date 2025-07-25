@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-import { getAgentInvokeUrl } from '@/config/services';
+import { getAgentInvokeUrl } from '../../../../config/services';
+import { getCurrentModel, getModelConfig, getFallbackModel, isValidModel } from '../../../../config/models';
 
 // Client Supabase avec service_role (bypass RLS)
 const supabaseAdmin = createClient(
@@ -14,7 +15,26 @@ const supabaseAdmin = createClient(
   }
 );
 
-interface SendMessageRequest {
+// Nouveau type pour la requête au format standard
+interface ChatRequest {
+  messages: {
+    role: 'user' | 'assistant' | 'system' | 'function' | 'tool';
+    content: string;
+    name?: string;
+    function_call?: any;
+    tool_calls?: any[];
+  }[];
+  conversation_id?: string | null;
+  user_id: string;
+  pharmacy_id: string;
+  stream?: boolean;
+  model?: string;
+  temperature?: number;
+  max_tokens?: number;
+}
+
+// Pour la compatibilité avec l'ancien format
+interface LegacyRequest {
   query: string;
   userId: string;
   codePs: string;
@@ -77,11 +97,73 @@ export async function POST(request: NextRequest) {
     }
 
     const authenticatedUser = authResult.user!;
-    const { query, userId, codePs, conversationId }: SendMessageRequest = await request.json();
+    
+    // Extraire les données de la requête et détecter le format
+    const requestData = await request.json();
+    
+    // Déterminer si c'est le nouveau format ou l'ancien
+    const isNewFormat = Array.isArray(requestData.messages);
+    
+    // Variables pour stocker les données normalisées
+    let userId: string;
+    let pharmacyId: string;
+    let conversationId: string | null | undefined;
+    let query: string;
+    let messages: ChatRequest['messages'];
+    let stream: boolean = false;
+    
+    // Configuration dynamique du modèle
+    const defaultModel = getCurrentModel();
+    const defaultModelConfig = getModelConfig(defaultModel);
+    
+    let model: string = defaultModel;
+    let temperature: number = defaultModelConfig?.defaultTemperature ?? 0.7;
+    let max_tokens: number = defaultModelConfig?.defaultMaxTokens ?? 2000;
+    
+    // Normaliser les données selon le format
+    if (isNewFormat) {
+      // Nouveau format
+      const chatRequest = requestData as ChatRequest;
+      messages = chatRequest.messages;
+      userId = chatRequest.user_id;
+      pharmacyId = chatRequest.pharmacy_id;
+      conversationId = chatRequest.conversation_id;
+      stream = chatRequest.stream || false;
+      // Valider et utiliser le modèle demandé ou le modèle par défaut
+      const requestedModel = chatRequest.model || defaultModel;
+      model = isValidModel(requestedModel) ? requestedModel : defaultModel;
+      
+      // Si le modèle demandé n'est pas valide, logger un warning
+      if (chatRequest.model && !isValidModel(chatRequest.model)) {
+        console.warn(`⚠️  Invalid model requested: ${chatRequest.model}, using default: ${defaultModel}`);
+      }
+      temperature = chatRequest.temperature || 0.7;
+      max_tokens = chatRequest.max_tokens || 2000;
+      
+      // Extraire le dernier message utilisateur
+      const userMessage = messages.filter(m => m.role === 'user').pop();
+      if (!userMessage) {
+        return NextResponse.json(
+          { error: 'No user message found in the request' },
+          { status: 400 }
+        );
+      }
+      query = userMessage.content;
+    } else {
+      // Ancien format
+      const legacyRequest = requestData as LegacyRequest;
+      userId = legacyRequest.userId;
+      pharmacyId = legacyRequest.codePs;
+      conversationId = legacyRequest.conversationId;
+      query = legacyRequest.query;
+      
+      // Convertir en nouveau format
+      messages = [{ role: 'user', content: query }];
+    }
     
     console.log('[API] Request validated for user:', authenticatedUser.id);
     
-    // Verify that the authenticated user matches the requested userId
+    // Vérifier que l'utilisateur authentifié correspond à l'utilisateur demandé
     if (authenticatedUser.id !== userId) {
       console.error('[API] User ID mismatch:', { authenticatedUserId: authenticatedUser.id, requestedUserId: userId });
       return NextResponse.json(
@@ -92,14 +174,16 @@ export async function POST(request: NextRequest) {
     
     console.log('[API] Send message request:', {
       userId,
-      codePs,
+      pharmacyId,
       conversationId,
       queryLength: query?.length || 0,
+      messageCount: messages.length,
+      stream,
     });
 
-    if (!query || !userId || !codePs) {
+    if (!query || !userId || !pharmacyId) {
       return NextResponse.json(
-        { error: 'Missing required fields: query, userId, or codePs' },
+        { error: 'Missing required fields: query, user_id, or pharmacy_id' },
         { status: 400 }
       );
     }
@@ -119,10 +203,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (profile.code_ps !== codePs) {
-      console.error('[API] Mismatched codePs:', { profileCodePs: profile.code_ps, requestCodePs: codePs });
+    if (profile.code_ps !== pharmacyId) {
+      console.error('[API] Mismatched pharmacy_id:', { profileCodePs: profile.code_ps, requestPharmacyId: pharmacyId });
       return NextResponse.json(
-        { error: 'Mismatched codePs. Access denied.' },
+        { error: 'Mismatched pharmacy_id. Access denied.' },
         { status: 403 }
       );
     }
@@ -170,118 +254,156 @@ export async function POST(request: NextRequest) {
     const agentUrl = process.env.CHIFA_LANGGRAPH_AGENT_URL || getAgentInvokeUrl();
     
     console.log('[API] Agent URL resolved to:', agentUrl);
-    console.log('[API] Environment CHIFA_LANGGRAPH_AGENT_URL:', process.env.CHIFA_LANGGRAPH_AGENT_URL);
-    console.log('[API] Fallback getAgentInvokeUrl():', getAgentInvokeUrl());
     
+    // Nouveau format pour la requête à l'agent
     const agentRequestBody = {
-      query: query,
+      messages: messages,
       db_id: profile.code_ps,
       litellm_virtual_key: litellmVirtualKey,
-      agent_comm_jwt_secret: process.env.CHIFA_AGENT_COMM_JWT_SECRET || null
+      agent_comm_jwt_secret: process.env.CHIFA_AGENT_COMM_JWT_SECRET || null,
+      model: model,
+      temperature: temperature,
+      max_tokens: max_tokens,
+      stream: stream
     };
+
+    // Pour la compatibilité avec l'ancien agent, ajouter aussi le champ query
+    if (!isNewFormat) {
+      (agentRequestBody as any).query = query;
+    }
 
     console.log('[API] Sending request to agent:', {
       agentUrl,
       db_id: profile.code_ps,
       conversationId,
+      stream,
     });
 
-    const agentResponse = await fetch(agentUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(agentRequestBody),
-    });
-
-    const agentResult = await agentResponse.json();
-
-    if (!agentResponse.ok) {
-      console.error('[API] Agent error:', agentResult.error || agentResult.detail || 'Unknown agent error');
-      return NextResponse.json(
-        { error: agentResult.error || agentResult.detail || 'Failed to get response from Chifa Agent' },
-        { status: agentResponse.status }
-      );
-    }
-
-    console.log('[API] Agent response received:', {
-      status: agentResponse.status,
-      conversationId,
-      responseSnippet: agentResult.response ? agentResult.response.substring(0, 100) : null,
-    });
-
-    // Mettre à jour les crédits demo si nécessaire
-    if (profile.pharmacy_status === 'active_demo') {
-      const newCredits = profile.demo_credits_remaining - 1;
-      const newStatus = newCredits <= 0 ? 'demo_credits_exhausted' : 'active_demo';
-      const { error: updateError } = await supabaseAdmin
-        .from('profiles')
-        .update({ demo_credits_remaining: newCredits, pharmacy_status: newStatus })
-        .eq('id', userId);
-      if (updateError) {
-        console.error('[API] Failed to update demo credits:', updateError);
-      }
-    }
-
-    // Sauvegarder la conversation
-    let finalConversationId: string | null = null;
-    let historySaveError: string | undefined = undefined;
-
-    try {
-      let conversation: { id: string; title: string | null; user_id: string; code_ps: string | null } | null = null;
-
-      if (conversationId) {
-        const { data: existingConv } = await supabaseAdmin
-          .from('chat_conversations')
-          .select('id, title, user_id, code_ps')
-          .eq('id', conversationId)
-          .eq('user_id', userId)
-          .single();
-        if (existingConv) conversation = existingConv;
-      }
-
-      if (!conversation) {
-        const conversationTitle = query.substring(0, 70) + (query.length > 70 ? '...' : '');
-        const { data: newConvData } = await supabaseAdmin
-          .from('chat_conversations')
-          .insert({ user_id: userId, code_ps: profile.code_ps, title: conversationTitle })
-          .select('id, title, user_id, code_ps')
-          .single();
-        conversation = newConvData;
+    // Si streaming est activé
+    if (stream) {
+      const encoder = new TextEncoder();
+      const customReadable = new ReadableStream({
+        async start(controller) {
+          try {
+            const agentResponse = await fetch(agentUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(agentRequestBody),
+            });
+            
+            if (!agentResponse.ok) {
+              const errorData = await agentResponse.json();
+              const errorText = JSON.stringify(errorData);
+              controller.enqueue(encoder.encode(`data: ${errorText}\n\n`));
+              controller.close();
+              return;
+            }
+            
+            const reader = agentResponse.body?.getReader();
+            if (!reader) {
+              controller.error(new Error('Agent response body is null'));
+              return;
+            }
+            
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              controller.enqueue(value);
+            }
+            
+            controller.close();
+          } catch (error) {
+            console.error('[API] Streaming error:', error);
+            controller.error(error);
+          }
+        }
+      });
+      
+      // Sauvegarder la conversation et les messages après le streaming
+      try {
+        await saveConversation(userId, profile.code_ps, query, conversationId, model);
+      } catch (error) {
+        console.error('[API] Error saving conversation during streaming:', error);
       }
       
-      if (conversation && conversation.id) {
-        finalConversationId = conversation.id;
-        const messagesToInsert = [
-          {
-            conversation_id: finalConversationId,
-            user_id: userId,
-            role: 'user' as const,
-            content: query,
-          },
-          {
-            conversation_id: finalConversationId,
-            user_id: userId,
-            role: 'assistant' as const,
-            content: agentResult.response,
-            sql_query: agentResult.sql_query || null,
-            sql_results: agentResult.results || agentResult.sqlResults || null,
-          }
-        ];
-        await supabaseAdmin.from('chat_messages').insert(messagesToInsert);
+      // Mettre à jour les crédits demo si nécessaire
+      if (profile.pharmacy_status === 'active_demo') {
+        const newCredits = profile.demo_credits_remaining - 1;
+        const newStatus = newCredits <= 0 ? 'demo_credits_exhausted' : 'active_demo';
+        const { error: updateError } = await supabaseAdmin
+          .from('profiles')
+          .update({ demo_credits_remaining: newCredits, pharmacy_status: newStatus })
+          .eq('id', userId);
+        if (updateError) {
+          console.error('[API] Failed to update demo credits:', updateError);
+        }
       }
-    } catch (historyError) {
-      console.error('[API] Error saving conversation to history:', historyError);
-      historySaveError = 'Error saving conversation to history.';
-    }
-    
-    const clientResponse = {
-      response: agentResult.response,
-      sqlQuery: agentResult.sql_query || null,
-      sqlResults: agentResult.results || agentResult.sqlResults || null,
-      conversationId: finalConversationId,
-      ...(historySaveError && { historySaveError }),
-    };
+      
+      return new Response(customReadable, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
+    } else {
+      // Traitement standard pour les appels non-streaming
+      const agentResponse = await fetch(agentUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(agentRequestBody),
+      });
 
-    return NextResponse.json(clientResponse);
+      const agentResult = await agentResponse.json();
+
+      if (!agentResponse.ok) {
+        console.error('[API] Agent error:', agentResult.error || agentResult.detail || 'Unknown agent error');
+        return NextResponse.json(
+          { error: agentResult.error || agentResult.detail || 'Failed to get response from Chifa Agent' },
+          { status: agentResponse.status }
+        );
+      }
+
+      console.log('[API] Agent response received:', {
+        status: agentResponse.status,
+        conversationId,
+        responseSnippet: agentResult.response ? agentResult.response.substring(0, 100) : null,
+      });
+
+      // Mettre à jour les crédits demo si nécessaire
+      if (profile.pharmacy_status === 'active_demo') {
+        const newCredits = profile.demo_credits_remaining - 1;
+        const newStatus = newCredits <= 0 ? 'demo_credits_exhausted' : 'active_demo';
+        const { error: updateError } = await supabaseAdmin
+          .from('profiles')
+          .update({ demo_credits_remaining: newCredits, pharmacy_status: newStatus })
+          .eq('id', userId);
+        if (updateError) {
+          console.error('[API] Failed to update demo credits:', updateError);
+        }
+      }
+
+      // Sauvegarder la conversation
+      const finalConversationId = await saveConversation(
+        userId, 
+        profile.code_ps, 
+        query, 
+        conversationId, 
+        model,
+        agentResult.response,
+        agentResult.sql_query,
+        agentResult.results || agentResult.sqlResults
+      );
+      
+      const clientResponse = {
+        response: agentResult.response,
+        sqlQuery: agentResult.sql_query || null,
+        sqlResults: agentResult.results || agentResult.sqlResults || null,
+        conversationId: finalConversationId,
+      };
+
+      return NextResponse.json(clientResponse);
+    }
 
   } catch (error) {
     console.error('[API] General error:', error);
@@ -290,4 +412,90 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
+
+// Fonction helper pour sauvegarder la conversation et les messages
+async function saveConversation(
+  userId: string, 
+  codePs: string, 
+  query: string, 
+  conversationId: string | null | undefined,
+  model: string,
+  response?: string,
+  sqlQuery?: string | null,
+  sqlResults?: any | null
+): Promise<string | null> {
+  try {
+    let conversation: { id: string; title: string | null; user_id: string; pharmacy_id: string | null } | null = null;
+
+    // Vérifier si la conversation existe déjà
+    if (conversationId) {
+      const { data: existingConv } = await supabaseAdmin
+        .from('conversations')
+        .select('id, title, user_id, pharmacy_id')
+        .eq('id', conversationId)
+        .eq('user_id', userId)
+        .single();
+      if (existingConv) conversation = existingConv;
+    }
+
+    // Créer une nouvelle conversation si nécessaire
+    if (!conversation) {
+      const conversationTitle = query.substring(0, 70) + (query.length > 70 ? '...' : '');
+      const { data: newConvData } = await supabaseAdmin
+        .from('conversations')
+        .insert({ 
+          user_id: userId, 
+          pharmacy_id: codePs, 
+          title: conversationTitle,
+          model: model,
+          status: 'active'
+        })
+        .select('id, title, user_id, pharmacy_id')
+        .single();
+      conversation = newConvData;
+    }
+    
+    if (conversation && conversation.id) {
+      // Ajouter le message utilisateur
+      await supabaseAdmin.from('messages').insert({
+        conversation_id: conversation.id,
+        role: 'user',
+        content: JSON.stringify({ text: query }),
+        content_text: query
+      });
+      
+      // Ajouter la réponse de l'assistant si disponible
+      if (response) {
+        const assistantMessageData = {
+          conversation_id: conversation.id,
+          role: 'assistant',
+          content: JSON.stringify({ 
+            text: response,
+            sql_query: sqlQuery || null,
+            sql_results: sqlResults || null
+          }),
+          content_text: response,
+          processing_time_ms: null, // À remplir si disponible
+          tokens_used: null, // À remplir si disponible
+          cost_cents: null // À remplir si disponible
+        };
+        
+        await supabaseAdmin.from('messages').insert(assistantMessageData);
+      }
+      
+      // Mettre à jour la date de dernière activité de la conversation
+      await supabaseAdmin
+        .from('conversations')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', conversation.id);
+      
+      return conversation.id;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[API] Error saving conversation:', error);
+    return null;
+  }
+}

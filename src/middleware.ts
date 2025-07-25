@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Routes protégées qui nécessitent une authentification
-  const protectedRoutes = ['/dashboard', '/history', '/settings', '/complete-pharmacy-profile'];
+  const protectedRoutes = ['/chat', '/history', '/settings', '/complete-pharmacy-profile'];
   // Routes d'authentification (où l'utilisateur ne devrait pas aller s'il est déjà loggué)
   const authRoutes = ['/login', '/register', '/forgot-password'];
 
@@ -68,8 +68,8 @@ export async function middleware(request: NextRequest) {
   }
 
   if (session && authRoutes.some(route => pathname.startsWith(route))) {
-    // Rediriger vers dashboard si authentifié et tente d'accéder à une page d'auth
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    // Rediriger vers chat si authentifié et tente d'accéder à une page d'auth
+    return NextResponse.redirect(new URL('/chat', request.url));
   }
   
   // Gérer le rafraîchissement de la session pour les Server Components

@@ -1,18 +1,18 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '../ui/button';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
-import { useAuthStore } from '@/stores/authStore';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+} from '../ui/dropdown-menu';
+import { Badge } from '../ui/badge';
+import { useAuthStore } from '../../stores/authStore';
+import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 import { LogOut, Settings, User, Bell, HelpCircle, Menu } from 'lucide-react';
 
 interface AdminHeaderProps {
@@ -83,14 +83,15 @@ export default function AdminHeader({ onMenuClick }: AdminHeaderProps) {
       <div className="flex h-full items-center justify-between px-4 sm:px-6">
         {/* Menu hamburger + Logo */}
         <div className="flex items-center space-x-4">
-          {/* Menu hamburger pour mobile */}
+          {/* Menu hamburger pour toutes les tailles d'écran */}
           <Button
             variant="ghost"
             size="sm"
-            className="lg:hidden"
             onClick={onMenuClick}
+            className="hover:bg-gray-100"
           >
             <Menu className="h-5 w-5" />
+            <span className="sr-only">Toggle sidebar</span>
           </Button>
           
           <div className="flex items-center space-x-3">

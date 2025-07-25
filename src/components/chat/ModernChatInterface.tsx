@@ -19,22 +19,26 @@ interface ModernChatInterfaceProps {
   onNewChat?: () => void;
 }
 
-export default function ModernChatInterface({ className }: ModernChatInterfaceProps) {
-  const {
-    messages,
-    currentQuery,
-    setCurrentQuery,
-    addMessage,
-    setLoading,
-    setError,
-    isLoading,
-    currentConversationId,
-    setCurrentConversationId,
-    clearChat
-  } = useChatStore();
 
-  const { callWithAuth } = useSupabaseAuth();
-  const { pharmacyStatus, demoCreditsRemaining, codePs } = useAuthStore();
+export default function ModernChatInterface({ className }: ModernChatInterfaceProps) {
+  console.log('ModernChatInterface: Rendering...');
+    const {
+      messages,
+      currentQuery,
+      setCurrentQuery,
+      addMessage,
+      setLoading,
+      setError,
+      isLoading,
+      currentConversationId,
+      setCurrentConversationId,
+      clearChat
+    } = useChatStore();
+
+    const { callWithAuth } = useSupabaseAuth();
+    const { pharmacyStatus, demoCreditsRemaining, codePs } = useAuthStore();
+    
+    console.log('Stores initialized:', { messagesCount: messages?.length, pharmacyStatus, codePs });
   const [isComponentLoading, setIsComponentLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -219,126 +223,111 @@ export default function ModernChatInterface({ className }: ModernChatInterfacePr
     return 'Posez votre question en langage naturel...';
   };
 
-  return (
-    <div className={cn("flex flex-col h-full bg-background", className)}>
-      {/* Messages - zone scrollable */}
-      <div className="flex-1 overflow-y-auto">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center px-4">
-            <Bot className="w-16 h-16 text-muted-foreground mb-4" />
-            <h2 className="text-2xl font-semibold mb-2">Bienvenue sur Chifa.ai</h2>
-            <p className="text-muted-foreground max-w-md">
-              Je suis votre assistant intelligent pour gérer votre pharmacie. 
-              Posez-moi des questions sur votre stock, vos ventes, ou toute autre information.
-            </p>
-          </div>
-        ) : (
-          <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-            {messages.map((message, index) => (
-              <div
-                key={message.id || index}
-                className={cn(
-                  "flex gap-4",
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
-                )}
-              >
-                {message.role !== 'user' && (
+    return (
+      <div className={cn("flex flex-col h-full bg-background", className)}>
+        {/* Messages - zone scrollable */}
+        <div className="flex-1 overflow-y-auto">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-4">
+              <Bot className="w-16 h-16 text-muted-foreground mb-4" />
+              <h2 className="text-2xl font-semibold mb-2">Bienvenue sur Chifa.ai</h2>
+              <p className="text-muted-foreground max-w-md">
+                Je suis votre assistant intelligent pour gérer votre pharmacie. 
+                Posez-moi des questions sur votre stock, vos ventes, ou toute autre information.
+              </p>
+            </div>
+          ) : (
+            <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+              {messages.map((message, index) => (
+                <div
+                  key={message.id || index}
+                  className={cn(
+                    "flex gap-4",
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  )}
+                >
+                  {message.role !== 'user' && (
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        <Bot className="w-4 h-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  
+                  <div className={cn(
+                    "max-w-[80%] rounded-2xl px-4 py-2",
+                    message.role === 'user' 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted'
+                  )}>
+                    <div className="whitespace-pre-wrap">
+                      {message.content}
+                    </div>
+                  </div>
+
+                  {message.role === 'user' && (
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className="bg-secondary">
+                        <User className="w-4 h-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
+              ))}
+              
+              {isLoading && (
+                <div className="flex gap-4">
                   <Avatar className="w-8 h-8">
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       <Bot className="w-4 h-4" />
                     </AvatarFallback>
                   </Avatar>
-                )}
-                
-                <div className={cn(
-                  "max-w-[80%] rounded-2xl px-4 py-2",
-                  message.role === 'user' 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-muted'
-                )}>
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                      code: ({ children }) => (
-                        <code className="bg-muted-foreground/10 px-1 py-0.5 rounded text-sm">
-                          {children}
-                        </code>
-                      ),
-                      pre: ({ children }) => (
-                        <pre className="bg-muted-foreground/10 p-3 rounded-lg overflow-x-auto">
-                          {children}
-                        </pre>
-                      ),
-                    }}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
-                </div>
-
-                {message.role === 'user' && (
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="bg-secondary">
-                      <User className="w-4 h-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
-            ))}
-            
-            {isLoading && (
-              <div className="flex gap-4">
-                <Avatar className="w-8 h-8">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    <Bot className="w-4 h-4" />
-                  </AvatarFallback>
-                </Avatar>
-                <div className="bg-muted rounded-2xl px-4 py-2">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="bg-muted rounded-2xl px-4 py-2">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </div>
-
-      {/* Input - toujours visible en bas */}
-      <div className="border-t border-border p-4 bg-background">
-        <div className="max-w-3xl mx-auto">
-          <form onSubmit={handleSubmit} className="relative">
-            <Input
-              ref={inputRef}
-              type="text"
-              placeholder={getPlaceholderText()}
-              value={currentQuery}
-              onChange={(e) => setCurrentQuery(e.target.value)}
-              disabled={!canSendMessage || isComponentLoading || isLoading}
-              className="pr-12 h-12 rounded-full bg-muted"
-            />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={!canSendMessage || !currentQuery.trim() || isComponentLoading || isLoading}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full"
-            >
-              {isLoading ? (
-                <StopCircle className="w-4 h-4" />
-              ) : (
-                <Send className="w-4 h-4" />
               )}
-            </Button>
-          </form>
-          <p className="text-xs text-center text-muted-foreground mt-2">
-            Chifa.ai peut faire des erreurs. Vérifiez les informations importantes.
-          </p>
+              
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input - toujours visible en bas */}
+        <div className="border-t border-border p-4 bg-background">
+          <div className="max-w-3xl mx-auto">
+            <form onSubmit={handleSubmit} className="relative">
+              <Input
+                ref={inputRef}
+                type="text"
+                placeholder={getPlaceholderText()}
+                value={currentQuery}
+                onChange={(e) => setCurrentQuery(e.target.value)}
+                disabled={!canSendMessage || isComponentLoading || isLoading}
+                className="pr-12 h-12 rounded-full bg-muted"
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={!canSendMessage || !currentQuery.trim() || isComponentLoading || isLoading}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full"
+              >
+                {isLoading ? (
+                  <StopCircle className="w-4 h-4" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </form>
+            <p className="text-xs text-center text-muted-foreground mt-2">
+              Chifa.ai peut faire des erreurs. Vérifiez les informations importantes.
+            </p>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
 }

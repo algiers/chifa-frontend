@@ -1,10 +1,10 @@
 "use client";
 
-import { Header } from "@/components/sections/Header"
-import { Footer } from "@/components/sections/Footer"
-import { Pricing } from "@/components/sections/Pricing"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Header } from "../../components/sections/Header"
+import { Footer } from "../../components/sections/Footer"
+import { Pricing } from "../../components/sections/Pricing"
+import { Badge } from "../../components/ui/badge"
+import { Button } from "../../components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 

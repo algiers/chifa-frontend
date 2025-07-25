@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import TestLoginButton from '@/components/admin/TestLoginButton';
+import { Button } from '../ui/button';
+import TestLoginButton from './TestLoginButton';
 
 interface PharmacyCredentialsModalProps {
   isOpen: boolean;
@@ -59,7 +59,7 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-4">
-      <div className="bg-white rounded-lg p-3 sm:p-6 w-full max-w-lg sm:max-w-xl md:max-w-2xl mx-auto max-h-[95vh] overflow-y-auto shadow-lg">
+      <div className="bg-white rounded-lg p-3 sm:p-6 w-full max-w-screen-sm mx-auto max-h-[90vh] overflow-y-auto shadow-lg">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-green-700 text-center sm:text-left">
             ✅ Pharmacie créée avec succès !
@@ -107,18 +107,16 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
               📧 Email de connexion
             </label>
-            <div className="flex flex-col xs:flex-row xs:items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <span className="font-mono bg-white px-2 py-2 sm:px-3 rounded border text-base sm:text-lg break-all">
                 {pharmacyData.email}
               </span>
-              <Button
+              <button
                 onClick={() => copyToClipboard(pharmacyData.email, 'email')}
-                variant="outline"
-                size="sm"
-                className="w-full xs:w-auto"
+                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium border border-gray-300 w-full sm:w-auto transition-colors"
               >
                 {copied === 'email' ? '✅ Copié' : '📋 Copier'}
-              </Button>
+              </button>
             </div>
           </div>
 
@@ -127,18 +125,16 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
             <label className="block text-xs sm:text-sm font-medium text-orange-700 mb-2">
               🔑 Mot de passe temporaire
             </label>
-            <div className="flex flex-col xs:flex-row xs:items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <span className="font-mono bg-yellow-100 px-2 py-2 sm:px-3 rounded border border-yellow-300 text-base sm:text-lg font-bold select-all break-all">
                 {pharmacyData.temp_password}
               </span>
-              <Button
+              <button
                 onClick={() => copyToClipboard(pharmacyData.temp_password, 'password')}
-                variant="outline"
-                size="sm"
-                className="bg-orange-100 hover:bg-orange-200 w-full xs:w-auto"
+                className="px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded text-xs font-medium border border-orange-300 w-full sm:w-auto transition-colors"
               >
                 {copied === 'password' ? '✅ Copié' : '📋 Copier'}
-              </Button>
+              </button>
             </div>
           </div>
 
@@ -147,18 +143,16 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
               🏷️ Code PS
             </label>
-            <div className="flex flex-col xs:flex-row xs:items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <span className="font-mono bg-white px-2 py-2 sm:px-3 rounded border text-base sm:text-lg break-all">
                 {pharmacyData.code_ps}
               </span>
-              <Button
+              <button
                 onClick={() => copyToClipboard(pharmacyData.code_ps, 'code_ps')}
-                variant="outline"
-                size="sm"
-                className="w-full xs:w-auto"
+                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium border border-gray-300 w-full sm:w-auto transition-colors"
               >
                 {copied === 'code_ps' ? '✅ Copié' : '📋 Copier'}
-              </Button>
+              </button>
             </div>
           </div>
 
@@ -167,42 +161,39 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
             <label className="block text-xs sm:text-sm font-medium text-blue-700 mb-2">
               🌐 URL de connexion
             </label>
-            <div className="flex flex-col xs:flex-row xs:items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <span className="font-mono bg-white px-2 py-2 sm:px-3 rounded border text-xs sm:text-sm break-all">
                 {window.location.origin}/login
               </span>
-              <Button
+              <button
                 onClick={() => copyToClipboard(`${window.location.origin}/login`, 'url')}
-                variant="outline"
-                size="sm"
-                className="w-full xs:w-auto"
+                className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs font-medium border border-blue-300 w-full sm:w-auto transition-colors"
               >
                 {copied === 'url' ? '✅ Copié' : '📋 Copier'}
-              </Button>
+              </button>
             </div>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-6">
-          <Button
+          <button
             onClick={copyAllCredentials}
-            className="w-full sm:flex-1 bg-green-600 hover:bg-green-700"
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium w-full sm:w-auto"
           >
-            {copied === 'all' ? '✅ Toutes les infos copiées' : '📋 Copier toutes les informations'}
-          </Button>
+            {copied === 'all' ? '✅ Tout copié' : '📋 Copier tout'}
+          </button>
           <div className="w-full sm:w-auto flex-1 flex justify-center items-center">
             <TestLoginButton 
               email={pharmacyData.email} 
               password={pharmacyData.temp_password} 
             />
           </div>
-          <Button
+          <button
             onClick={onClose}
-            variant="outline"
-            className="w-full sm:w-auto px-6"
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium border border-gray-300 w-full sm:w-auto transition-colors"
           >
             Fermer
-          </Button>
+          </button>
         </div>
 
         <div className="mt-4 text-xs sm:text-xs text-gray-500 bg-gray-50 p-2 sm:p-3 rounded break-words">

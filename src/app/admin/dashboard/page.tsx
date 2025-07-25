@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { createSupabaseBrowserClient } from '../../../lib/supabase/client';
+import { Button } from '../../../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
+import { Badge } from '../../../components/ui/badge';
+import { ThemeToggle } from '../../../components/theme-toggle';
 import { Building2, Users, CheckCircle, Clock, AlertCircle, ArrowLeft, Activity, BarChart3, Settings, RefreshCw } from 'lucide-react';
 
 interface AdminStats {
@@ -48,7 +48,7 @@ export default function AdminDashboardPage() {
       // Calculer les statistiques
       const totalPharmacies = data.length;
       const activePharmacies = data.filter((p: any) => p.pharmacy_status === 'active').length;
-      const pendingPharmacies = data.filter((p: any) => p.pharmacy_status === 'pending').length;
+      const pendingPharmacies = data.filter((p: any) => ['pending_approval', 'pending_payment_approval', 'pending_pharmacy_details'].includes(p.pharmacy_status)).length;
       const suspendedPharmacies = data.filter((p: any) => p.pharmacy_status === 'suspended').length;
       const totalUsers = data.filter((p: any) => !p.is_admin).length;
 

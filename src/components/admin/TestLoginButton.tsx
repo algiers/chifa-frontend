@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { Button } from '../ui/button';
+import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 import { toast } from 'sonner';
 
 interface TestLoginButtonProps {

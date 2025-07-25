@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import AdminLayout from '@/components/admin/AdminLayout';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import AdminLayout from '../../components/admin/AdminLayout';
+import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 import { 
   Users, 
   Building2, 
@@ -56,7 +56,7 @@ export default function AdminDashboardPage() {
         const pharmacies = await pharmaciesResponse.json();
         const totalPharmacies = pharmacies.length;
         const activePharmacies = pharmacies.filter((p: any) => p.pharmacy_status === 'active').length;
-        const pendingPharmacies = pharmacies.filter((p: any) => p.pharmacy_status === 'pending').length;
+        const pendingPharmacies = pharmacies.filter((p: any) => ['pending_approval', 'pending_payment_approval', 'pending_pharmacy_details'].includes(p.pharmacy_status)).length;
         const suspendedPharmacies = pharmacies.filter((p: any) => p.pharmacy_status === 'suspended').length;
 
         setStats(prev => ({

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import { cn } from '../../lib/utils';
 import { 
   Users, 
   Database, 
@@ -133,9 +133,10 @@ const sidebarItems: SidebarItem[] = [
 interface AdminSidebarProps {
   className?: string;
   onItemClick?: () => void;
+  collapsed?: boolean;
 }
 
-export default function AdminSidebar({ className, onItemClick }: AdminSidebarProps) {
+export default function AdminSidebar({ className, onItemClick, collapsed = false }: AdminSidebarProps) {
   const pathname = usePathname();
   const [expandedItems, setExpandedItems] = useState<string[]>(['Gestion']);
 
@@ -153,27 +154,38 @@ export default function AdminSidebar({ className, onItemClick }: AdminSidebarPro
     const isExpanded = expandedItems.includes(item.title);
     const isParentActive = hasChildren && item.items && item.items.some(child => pathname === child.href);
 
+    // En mode collapsed, ne pas afficher les sous-éléments
+    if (collapsed && level > 0) {
+      return null;
+    }
+
     if (hasChildren) {
       return (
         <div key={item.title} className="space-y-1">
           <button
-            onClick={() => toggleExpanded(item.title)}
+            onClick={() => !collapsed && toggleExpanded(item.title)}
             className={cn(
-              "w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors",
+              "w-full flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors",
+              collapsed ? "justify-center" : "justify-between",
               isParentActive ? "bg-accent/50 text-accent-foreground" : "text-muted-foreground"
             )}
+            title={collapsed ? item.title : undefined}
           >
-            <div className="flex items-center">
-              <item.icon className="mr-2 h-4 w-4" />
-              {item.title}
+            <div className={cn("flex items-center", collapsed && "justify-center")}>
+              <item.icon className={cn("h-4 w-4", !collapsed && "mr-2")} />
+              {!collapsed && item.title}
             </div>
-            {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
+            {!collapsed && (
+              <>
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </>
             )}
           </button>
-          {isExpanded && (
+          {!collapsed && isExpanded && (
             <div className="space-y-1 pl-4">
               {item.items && item.items.map(child => renderSidebarItem(child, level + 1))}
             </div>
@@ -189,37 +201,52 @@ export default function AdminSidebar({ className, onItemClick }: AdminSidebarPro
         onClick={onItemClick}
         className={cn(
           "flex items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors",
-          level > 0 && "ml-4",
+          level > 0 && !collapsed && "ml-4",
+          collapsed && "justify-center",
           isActive && "bg-accent text-accent-foreground",
           !isActive && "text-muted-foreground"
         )}
+        title={collapsed ? item.title : undefined}
       >
-        <item.icon className="mr-2 h-4 w-4" />
-        {item.title}
-        {item.badge && (
-          <span className="ml-auto rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">
-            {item.badge}
-          </span>
+        <item.icon className={cn("h-4 w-4", !collapsed && "mr-2")} />
+        {!collapsed && (
+          <>
+            {item.title}
+            {item.badge && (
+              <span className="ml-auto rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">
+                {item.badge}
+              </span>
+            )}
+          </>
         )}
       </Link>
     );
   };
 
   return (
-    <div className={cn("h-full w-64 flex flex-col", className)}>
+    <div className={cn(
+      "h-full flex flex-col transition-all duration-300",
+      collapsed ? "w-16" : "w-64", 
+      className
+    )}>
       {/* Contenu scrollable */}
       <div className="flex-1 overflow-y-auto scrollbar-auto-hide">
-        <div className="space-y-2 py-4 px-2">
+        <div className={cn(
+          "space-y-2 py-4 transition-all duration-300",
+          collapsed ? "px-1" : "px-2"
+        )}>
           {sidebarItems.map(item => renderSidebarItem(item))}
         </div>
       </div>
       
       {/* Footer fixe en bas */}
-      <div className="border-t border-border p-4 bg-background/95">
-        <div className="text-xs text-muted-foreground text-center">
-          Chifa.ai Admin v1.0
+      {!collapsed && (
+        <div className="border-t border-border p-4 bg-background/95 flex-shrink-0">
+          <div className="text-xs text-muted-foreground text-center">
+            Chifa.ai Admin v1.0
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { useChatStore } from '@/stores/chatStore';
 import MessageItem from './MessageItem';
-import { Skeleton } from '@/components/ui/skeleton'; // À ajouter via shadcn
+import { useChatStore } from '../../stores/chatStore';
+import { Skeleton } from '../ui/skeleton'; // À ajouter via shadcn
 
 export default function MessageList() {
   const { messages, isLoading } = useChatStore();

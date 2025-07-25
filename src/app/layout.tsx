@@ -3,12 +3,13 @@
 import "./globals.css";
 import "../styles/admin-scrollbar.css";
 import "../styles/dropdown-fix.css";
+import "../styles/chat.css";
 import React, { useEffect, useState } from "react";
-import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
-import { SupabaseProvider } from '@/contexts/SupabaseContext';
-import { ThemeProvider } from '@/components/theme-provider';
-import { Toaster } from '@/components/ui/sonner';
-import { FullScreenLoading } from '@/components/ui/loading';
+import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
+import { SupabaseProvider } from '../contexts/SupabaseContext';
+import { ThemeProvider } from '../components/theme-provider';
+import { Toaster } from '../components/ui/sonner';
+import { FullScreenLoading } from '../components/ui/loading';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 export default function RootLayout({

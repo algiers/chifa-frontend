@@ -1,20 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
-import ChatSidebar from './ChatSidebar';
-import ModernChatInterface from './ModernChatInterface';
-import { ThemeToggle } from '@/components/theme-toggle';
-import PharmacyConnectionStatus from '@/components/PharmacyConnectionStatus';
+import { cn } from '../../lib/utils';
+import { Sparkles } from 'lucide-react';
+import ChatSidebarV2 from './ChatSidebarV2';
+import ChatUIGemini from './ChatUIGemini';
+import PharmacyConnectionStatus from '../PharmacyConnectionStatus';
+import ThemeToggle from './ThemeToggle';
 
 interface ChatLayoutProps {
   className?: string;
 }
 
 export default function ChatLayout({ className }: ChatLayoutProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
   const handleNewChat = () => {
@@ -25,57 +24,26 @@ export default function ChatLayout({ className }: ChatLayoutProps) {
     setCurrentConversationId(conversationId);
   };
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
   return (
-    <div className={cn("flex h-screen bg-background border-none", className)}>
-      {/* Sidebar avec animation */}
-      <div className={cn(
-        "transition-all duration-300 ease-in-out",
-        isSidebarOpen ? "w-64" : "w-0"
-      )}>
-        <div className={cn(
-          "h-full overflow-hidden",
-          !isSidebarOpen && "hidden"
-        )}>
-          <ChatSidebar 
-            onConversationSelect={handleConversationSelect}
-            currentConversationId={currentConversationId}
-            onNewChat={handleNewChat}
-          />
-        </div>
-      </div>
+    <div className={cn("flex h-screen bg-white dark:bg-gray-900", className)}>
+      {/* Sidebar ChatGPT-like */}
+      <ChatSidebarV2 
+        onConversationSelect={handleConversationSelect}
+        currentConversationId={currentConversationId}
+        onNewChat={handleNewChat}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
+      />
 
       {/* Contenu principal */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header avec bouton toggle, thème et connectivité */}
-        <header className="flex items-center justify-between p-4 border-b border-border bg-background">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              aria-label="Toggle sidebar"
-            >
-              {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-            <h1 className="text-lg font-semibold ml-2">Chifa.ai Assistant</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            {/* Bouton thème (croissant/soleil) */}
-            <ThemeToggle />
-            {/* Bouton connectivité DB */}
-            <PharmacyConnectionStatus />
-          </div>
-        </header>
-
         {/* Zone de chat */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <ModernChatInterface 
-            className="flex-1"
-          />
+          <ChatUIGemini />
         </div>
       </div>
     </div>
