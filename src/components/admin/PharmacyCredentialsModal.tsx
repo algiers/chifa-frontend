@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '../ui/button';
 import TestLoginButton from './TestLoginButton';
 
 interface PharmacyCredentialsModalProps {
@@ -21,6 +20,15 @@ export default function PharmacyCredentialsModal({
   pharmacyData 
 }: PharmacyCredentialsModalProps) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setIsVisible(true);
+    } else {
+      setIsVisible(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -58,8 +66,8 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-4">
-      <div className="bg-white rounded-lg p-3 sm:p-6 w-full max-w-screen-sm mx-auto max-h-[90vh] overflow-y-auto shadow-lg">
+    <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-4 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`bg-white rounded-lg p-3 sm:p-6 w-full max-w-screen-sm mx-auto max-h-[90vh] overflow-y-auto shadow-lg transition-all duration-300 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-green-700 text-center sm:text-left">
             ✅ Pharmacie créée avec succès !
@@ -108,12 +116,12 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
               📧 Email de connexion
             </label>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <span className="font-mono bg-white px-2 py-2 sm:px-3 rounded border text-base sm:text-lg break-all">
+              <span className="flex-1 font-mono bg-white px-3 py-3 rounded border text-base sm:text-lg break-all min-w-0">
                 {pharmacyData.email}
               </span>
               <button
                 onClick={() => copyToClipboard(pharmacyData.email, 'email')}
-                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium border border-gray-300 w-full sm:w-auto transition-colors"
+                className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium border border-gray-300 w-full sm:w-auto sm:flex-shrink-0 transition-colors h-[52px]"
               >
                 {copied === 'email' ? '✅ Copié' : '📋 Copier'}
               </button>
@@ -126,12 +134,12 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
               🔑 Mot de passe temporaire
             </label>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <span className="font-mono bg-yellow-100 px-2 py-2 sm:px-3 rounded border border-yellow-300 text-base sm:text-lg font-bold select-all break-all">
+              <span className="flex-1 font-mono bg-yellow-100 px-3 py-3 rounded border border-yellow-300 text-base sm:text-lg font-bold select-all break-all min-w-0">
                 {pharmacyData.temp_password}
               </span>
               <button
                 onClick={() => copyToClipboard(pharmacyData.temp_password, 'password')}
-                className="px-3 py-1 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded text-xs font-medium border border-orange-300 w-full sm:w-auto transition-colors"
+                className="px-4 py-3 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded text-sm font-medium border border-orange-300 w-full sm:w-auto sm:flex-shrink-0 transition-colors h-[52px]"
               >
                 {copied === 'password' ? '✅ Copié' : '📋 Copier'}
               </button>
@@ -144,12 +152,12 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
               🏷️ Code PS
             </label>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <span className="font-mono bg-white px-2 py-2 sm:px-3 rounded border text-base sm:text-lg break-all">
+              <span className="flex-1 font-mono bg-white px-3 py-3 rounded border text-base sm:text-lg break-all min-w-0">
                 {pharmacyData.code_ps}
               </span>
               <button
                 onClick={() => copyToClipboard(pharmacyData.code_ps, 'code_ps')}
-                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium border border-gray-300 w-full sm:w-auto transition-colors"
+                className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium border border-gray-300 w-full sm:w-auto sm:flex-shrink-0 transition-colors h-[52px]"
               >
                 {copied === 'code_ps' ? '✅ Copié' : '📋 Copier'}
               </button>
@@ -162,12 +170,12 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
               🌐 URL de connexion
             </label>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <span className="font-mono bg-white px-2 py-2 sm:px-3 rounded border text-xs sm:text-sm break-all">
+              <span className="flex-1 font-mono bg-white px-3 py-3 rounded border text-sm sm:text-base break-all min-w-0">
                 {window.location.origin}/login
               </span>
               <button
                 onClick={() => copyToClipboard(`${window.location.origin}/login`, 'url')}
-                className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs font-medium border border-blue-300 w-full sm:w-auto transition-colors"
+                className="px-4 py-3 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-sm font-medium border border-blue-300 w-full sm:w-auto sm:flex-shrink-0 transition-colors h-[52px]"
               >
                 {copied === 'url' ? '✅ Copié' : '📋 Copier'}
               </button>
@@ -178,7 +186,7 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-6">
           <button
             onClick={copyAllCredentials}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium w-full sm:w-auto"
+            className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded text-base font-medium w-full sm:w-auto min-h-[48px] shadow-sm hover:shadow-md transition-all"
           >
             {copied === 'all' ? '✅ Tout copié' : '📋 Copier tout'}
           </button>
@@ -190,7 +198,7 @@ Généré le: ${new Date().toLocaleString('fr-FR')}
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-medium border border-gray-300 w-full sm:w-auto transition-colors"
+            className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-base font-medium border border-gray-300 w-full sm:w-auto min-h-[48px] shadow-sm hover:shadow-md transition-all"
           >
             Fermer
           </button>

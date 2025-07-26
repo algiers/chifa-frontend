@@ -50,8 +50,7 @@ export default function TestLoginButton({ email, password }: TestLoginButtonProp
       onClick={testLogin}
       disabled={isLoading || !email || !password}
       variant="outline"
-      size="sm"
-      className="bg-green-50 hover:bg-green-100 text-green-700 border-green-300"
+      className="bg-green-50 hover:bg-green-100 text-green-700 border-green-300 px-4 py-3 h-[52px] text-sm font-medium w-full sm:w-auto"
     >
       {isLoading ? (
         <>

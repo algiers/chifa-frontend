@@ -139,8 +139,10 @@ export default function AdminPharmaciesPage() {
     });
   };
 
-  const fetchPharmacies = async () => {
-    setLoading(true);
+  const fetchPharmacies = async (showLoadingState = true) => {
+    if (showLoadingState) {
+      setLoading(true);
+    }
     setError(null);
     
     try {
@@ -167,7 +169,9 @@ export default function AdminPharmaciesPage() {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
       setPharmacies([]);
     } finally {
-      setLoading(false);
+      if (showLoadingState) {
+        setLoading(false);
+      }
     }
   };
 
@@ -203,7 +207,7 @@ export default function AdminPharmaciesPage() {
       }
 
       toast.success(`Statut mis à jour vers "${newStatus}"`);
-      await fetchPharmacies();
+      await fetchPharmacies(false); // Ne pas afficher l'état de chargement pour les rafraîchissements
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
     } finally {
@@ -218,6 +222,10 @@ export default function AdminPharmaciesPage() {
     console.log('[handleCreatePharmacy] Starting creation with data:', {
       ...formData,
       password: formData.password ? `[${formData.password.length} chars]` : 'EMPTY'
+    });
+
+    const progressToast = toast.loading('Création de la pharmacie en cours...', {
+      duration: 25000,
     });
 
     try {
@@ -237,60 +245,92 @@ export default function AdminPharmaciesPage() {
       const baseUrl = window.location.origin;
       const apiUrl = `${baseUrl}/api/admin/pharmacies`;
       console.log('[handleCreatePharmacy] API URL:', apiUrl);
-      // Timeout de 15s pour le fetch
+      
+      // Timeout de 25s pour le fetch (augmenté pour gérer les timeouts LiteLLM)
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      const timeout = setTimeout(() => {
+        controller.abort();
+        console.log('[handleCreatePharmacy] Request timeout after 25 seconds');
+      }, 25000);
+      
       let response;
       try {
         console.log('[handleCreatePharmacy] About to send fetch POST to API...');
-        toast.info('Envoi de la requête de création à l’API...');
+        toast.info('Envoi de la requête de création à l\'API...');
+        
+        const requestBody = {
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.full_name,
+          pharmacy_name: formData.pharmacy_name,
+          pharmacy_address: formData.pharmacy_address,
+          code_ps: formData.code_ps,
+          phone_number: formData.phone_number,
+          virtual_key: formData.virtual_key || undefined // Ne pas envoyer une clé vide
+        };
+        
         response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(requestBody),
           signal: controller.signal
         });
+        
         console.log('[handleCreatePharmacy] Fetch POST terminé, status:', response.status);
-        toast.info('Réponse reçue de l’API, status: ' + response.status);
+        toast.info('Réponse reçue de l\'API, status: ' + response.status);
       } catch (fetchErr) {
         const err = fetchErr as any;
         console.error('[handleCreatePharmacy] Fetch error:', err);
-        toast.error('Erreur lors de la requête API: ' + (err?.message || String(err)));
+        
         if (err?.name === 'AbortError') {
-          toast.error('La requête a expiré (timeout).');
-          throw new Error('Timeout API');
+          toast.error('La requête a expiré (timeout de 25 secondes). Cela peut être dû à un problème réseau.');
+          throw new Error('Timeout API - La création prend trop de temps. Veuillez réessayer ou vérifier votre connexion.');
+        } else {
+          toast.error('Erreur de connexion: ' + (err?.message || String(err)));
+          throw new Error('Erreur de connexion au serveur: ' + (err?.message || 'Erreur réseau'));
         }
-        throw err;
       } finally {
         clearTimeout(timeout);
         console.log('[handleCreatePharmacy] FINALLY after fetch POST');
-        toast.info('Bloc finally exécuté après fetch POST');
       }
+      
       console.log('[handleCreatePharmacy] Response status:', response.status);
+      
+      // Lire la réponse UNE SEULE FOIS
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        console.error('[handleCreatePharmacy] Error parsing response:', parseError);
+        throw new Error('Erreur de format de réponse du serveur');
+      }
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('[handleCreatePharmacy] Error response:', errorData);
-        throw new Error(errorData.error || 'Erreur lors de la création');
+        console.error('[handleCreatePharmacy] Error response:', result);
+        
+        // Messages d'erreur plus détaillés
+        let errorMessage = result.error || 'Erreur lors de la création';
+        
+        if (response.status === 409) {
+          errorMessage = result.error || 'Cette pharmacie existe déjà (email ou code PS déjà utilisé)';
+        } else if (response.status === 400) {
+          errorMessage = result.error || 'Données invalides. Veuillez vérifier tous les champs.';
+        } else if (response.status === 401) {
+          errorMessage = 'Session expirée. Veuillez vous reconnecter.';
+        } else if (response.status >= 500) {
+          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+        }
+        
+        throw new Error(errorMessage);
       }
-      const result = await response.json();
       console.log('[AdminPharmacies] Creation result:', result);
+      toast.dismiss(progressToast);
       toast.success(result.message);
-      if (result.temp_password && result.pharmacy) {
-        console.log('[AdminPharmacies] Displaying credentials modal:', result.temp_password);
-        setNewPharmacyCredentials({
-          pharmacy_name: result.pharmacy.pharmacy_name,
-          email: result.pharmacy.email,
-          temp_password: result.temp_password,
-          code_ps: result.pharmacy.code_ps
-        });
-        setShowCredentialsModal(true);
-      } else {
-        console.warn('[AdminPharmacies] No temp_password in result:', result);
-        toast.error('Attention: Aucun mot de passe temporaire généré. Vérifiez la création.');
-      }
+      
+      // Réinitialiser le formulaire en premier
       setFormData({
         email: '',
         password: '',
@@ -301,11 +341,50 @@ export default function AdminPharmaciesPage() {
         phone_number: '',
         virtual_key: '',
       });
+      
+      // Fermer le formulaire de création
       setShowCreateForm(false);
-      await fetchPharmacies();
+      
+      // Rafraîchir la liste des pharmacies
+      await fetchPharmacies(false); // Ne pas afficher l'état de chargement pour les rafraîchissements
+      
+      // Afficher le modal des credentials avec un léger délai pour éviter le flash
+      setTimeout(() => {
+        if (result.temp_password && result.pharmacy) {
+          console.log('[AdminPharmacies] Displaying credentials modal:', result.temp_password);
+          setNewPharmacyCredentials({
+            pharmacy_name: result.pharmacy.pharmacy_name,
+            email: result.pharmacy.email,
+            temp_password: result.temp_password,
+            code_ps: result.pharmacy.code_ps
+          });
+          setShowCredentialsModal(true);
+        } else {
+          console.warn('[AdminPharmacies] No temp_password in result:', result);
+          toast.error('Attention: Aucun mot de passe temporaire généré. Vérifiez la création.');
+        }
+      }, 100);
     } catch (err) {
       console.error('[handleCreatePharmacy] CATCH block:', err);
-      toast.error(err instanceof Error ? err.message : 'Erreur lors de la création');
+      toast.dismiss(progressToast);
+      
+      // Messages d'erreur plus spécifiques
+      let errorMessage = 'Erreur lors de la création';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else {
+        errorMessage = 'Une erreur inconnue s\'est produite';
+      }
+      
+      toast.error(errorMessage);
+      console.error('[handleCreatePharmacy] Full error details:', {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : 'No stack trace',
+        timestamp: new Date().toISOString()
+      });
     } finally {
       console.log('[handleCreatePharmacy] FINALLY block');
       setCreateLoading(false);
@@ -384,7 +463,7 @@ export default function AdminPharmaciesPage() {
       
       setShowEditForm(false);
       setEditData(null);
-      await fetchPharmacies();
+      await fetchPharmacies(false); // Ne pas afficher l'état de chargement pour les rafraîchissements
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
     } finally {
@@ -454,8 +533,8 @@ export default function AdminPharmaciesPage() {
 
       {/* Formulaire de création */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] shadow-xl border border-gray-200">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto transition-opacity duration-300">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] shadow-xl border border-gray-200 transition-all duration-300 scale-100">
             <div className="p-6 overflow-y-auto max-h-[85vh]">
               <h2 className="text-xl font-bold mb-6 text-center text-gray-800">Créer une nouvelle pharmacie</h2>
             <form onSubmit={handleCreatePharmacy} className="space-y-6">
@@ -633,9 +712,14 @@ export default function AdminPharmaciesPage() {
                 <button
                   type="submit"
                   disabled={createLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium order-1 sm:order-2"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium order-1 sm:order-2 flex items-center justify-center gap-2"
                 >
-                  {createLoading ? 'Création...' : 'Créer'}
+                  {createLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Création...
+                    </>
+                  ) : 'Créer'}
                 </button>
               </div>
             </form>

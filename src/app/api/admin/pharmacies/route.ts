@@ -347,10 +347,17 @@ export async function POST(request: NextRequest) {
     const litellmMasterKey = process.env.LITELLM_MASTER_KEY || 'a1b2c3d4-e5f6-7890-1234-567890abcdef';
     
     let finalVirtualKey = virtual_key; // Utiliser la clé fournie si disponible
+    let liteLLMKeyCreated = false;
     
     if (!finalVirtualKey) {
       // Seulement essayer de créer une nouvelle clé si aucune n'est fournie
       try {
+        // Ajouter un timeout de 5 secondes pour éviter le blocage
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        console.log('[POST /api/admin/pharmacies] Attempting to create LiteLLM virtual key...');
+        
         const virtualKeyResponse = await fetch(`${litellmApiUrl}/key/generate`, {
           method: 'POST',
           headers: {
@@ -370,22 +377,35 @@ export async function POST(request: NextRequest) {
               pharmacist_name: full_name,
               created_by: 'admin-api'
             }
-          })
+          }),
+          signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
+
         if (!virtualKeyResponse.ok) {
-          console.error('[POST /api/admin/pharmacies] Error creating LiteLLM virtual key:', await virtualKeyResponse.text());
-          throw new Error('Failed to create LiteLLM virtual key');
+          const errorText = await virtualKeyResponse.text();
+          console.error('[POST /api/admin/pharmacies] Error creating LiteLLM virtual key:', errorText);
+          throw new Error(`LiteLLM API error: ${virtualKeyResponse.status}`);
         }
 
         const virtualKeyData = await virtualKeyResponse.json();
         finalVirtualKey = virtualKeyData.key;
+        liteLLMKeyCreated = true;
+        console.log('[POST /api/admin/pharmacies] LiteLLM virtual key created successfully');
       } catch (error) {
-        console.error('[POST /api/admin/pharmacies] Error with LiteLLM key generation:', error);
+        if (error.name === 'AbortError') {
+          console.error('[POST /api/admin/pharmacies] LiteLLM API timeout - using fallback key');
+        } else {
+          console.error('[POST /api/admin/pharmacies] Error with LiteLLM key generation:', error);
+        }
         
-        // Générer une clé de secours au format local si l'API LiteLLM échoue
+        // Toujours générer une clé de secours au format local si l'API LiteLLM échoue
         finalVirtualKey = generateVirtualKey(code_ps);
+        console.log('[POST /api/admin/pharmacies] Using fallback virtual key:', finalVirtualKey);
       }
+    } else {
+      liteLLMKeyCreated = true; // Clé déjà fournie
     }
 
     // Stocker la clé virtuelle dans pharmacy_secrets
@@ -396,13 +416,20 @@ export async function POST(request: NextRequest) {
         litellm_virtual_key: finalVirtualKey 
       }, { onConflict: 'code_ps' });
 
+    // Créer une note informative si la clé LiteLLM n'a pas pu être créée
+    let infoMessage = 'Pharmacie créée avec succès';
+    if (!liteLLMKeyCreated) {
+      infoMessage = 'Pharmacie créée avec succès. Note : La clé LiteLLM n\'a pas pu être créée automatiquement. Vous devrez peut-être la générer manuellement ou vérifier la connexion au service LiteLLM.';
+    }
+
     return NextResponse.json({
-      message: 'Pharmacie créée avec succès',
+      message: infoMessage,
       pharmacy: {
         ...profileData,
         virtual_key: finalVirtualKey
       },
-      temp_password: tempPassword // Afficher à l'admin
+      temp_password: tempPassword, // Afficher à l'admin
+      lite_llm_key_created: liteLLMKeyCreated
     });
   } catch (error) {
     console.error('[POST /api/admin/pharmacies] Error:', error);
