@@ -394,7 +394,7 @@ export async function POST(request: NextRequest) {
         liteLLMKeyCreated = true;
         console.log('[POST /api/admin/pharmacies] LiteLLM virtual key created successfully');
       } catch (error) {
-        if (error.name === 'AbortError') {
+        if (error instanceof Error && error.name === 'AbortError') {
           console.error('[POST /api/admin/pharmacies] LiteLLM API timeout - using fallback key');
         } else {
           console.error('[POST /api/admin/pharmacies] Error with LiteLLM key generation:', error);

@@ -504,7 +504,7 @@ export default function AdminPharmaciesPage() {
       <div className="bg-red-50 border border-red-200 rounded-md p-4">
         <div className="text-red-600">Erreur : {error}</div>
         <button 
-          onClick={fetchPharmacies}
+          onClick={() => fetchPharmacies()}
           className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
         >
           Réessayer
